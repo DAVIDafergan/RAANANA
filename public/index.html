@@ -175,6 +175,17 @@
   }
   .warning-banner .warning-sub { font-size: 13px; color: var(--text); }
   .error-msg { color: var(--danger); font-size: 13px; text-align: center; margin-top: -8px; margin-bottom: 10px; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  .screen.active { animation: slideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @keyframes btnPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(0.96); }
+    100% { transform: scale(1); }
+  }
+  .btn:active { animation: btnPop 0.18s ease; }
 </style>
 </head>
 <body>
@@ -230,13 +241,14 @@
       <div class="contact-step">
         <div class="contact-icon">📞</div>
         <div>
-          <h3>גלגל המזל רעננה</h3>
+          <h3>רעננה NEWS</h3>
           <p>055-667-4329</p>
         </div>
       </div>
       <a href="/raanana-wheel.vcf" download onclick="setTimeout(contactSaved, 500)">
         <button class="btn btn-gold">💾 שמור איש קשר לזכייה</button>
       </a>
+      <button class="btn btn-ghost" style="margin-top:10px;" onclick="goTo('screen-otp', 1)">⟵ חזרה</button>
     </div>
   </div>
 
@@ -252,6 +264,7 @@
       <button id="spin-btn" onclick="doSpin()">🎡 סובב!</button>
     </div>
     <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px;">סיבוב אחד בכל 24 שעות · בהצלחה!</p>
+    <button class="btn btn-ghost" style="margin-top:14px;" onclick="goTo('screen-contact', 2)">⟵ חזרה</button>
   </div>
 
   <!-- SCREEN 5: Win -->
@@ -266,6 +279,7 @@
         <div class="vip-expires">תוקף: <span class="timer" id="win-timer">02:00:00</span></div>
       </div>
       <p style="font-size:13px;color:var(--muted);line-height:1.6;">הראה את הקוד המהבהב לצוות בעסק כדי לממש את הפרס שלך. שים לב לתוקף!</p>
+      <button class="btn btn-ghost" style="margin-top:16px;" onclick="goTo('screen-wheel', 3)">⟵ חזרה לגלגל</button>
     </div>
   </div>
 
@@ -279,8 +293,15 @@
         <div class="next-spin-label">הסיבוב הבא עוד</div>
         <div class="next-spin-timer" id="next-spin-timer">24:00:00</div>
       </div>
+      <button class="btn btn-ghost" style="margin-top:16px;" onclick="goTo('screen-wheel', 3)">⟵ חזרה לגלגל</button>
     </div>
   </div>
+</div>
+
+<div style="text-align:center;margin-top:8px;padding-bottom:16px;position:relative;z-index:1;">
+  <a href="/admin" style="text-decoration:none;">
+    <button class="btn btn-ghost" style="width:auto;padding:10px 24px;font-size:14px;">⚙️ איזור ניהול</button>
+  </a>
 </div>
 
 <script>
