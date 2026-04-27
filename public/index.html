@@ -334,7 +334,8 @@ async function sendOTP() {
         token = d.token; userName = d.name;
         localStorage.setItem('whl_token', token);
         localStorage.setItem('whl_name', userName);
-        goTo('screen-contact', 2);
+        goTo('screen-wheel', 3);
+        loadWheelData();
         return;
       }
       document.getElementById('otp-sub').textContent = `שלחנו SMS ל-${regPhone}`;
