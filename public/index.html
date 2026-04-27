@@ -251,6 +251,7 @@
   <!-- SCREEN 3: Save Contact -->
   <div class="screen" id="screen-contact">
     <div class="card">
+      <div id="greeting-msg" style="display:none;font-family:'Rubik',sans-serif;font-size:20px;font-weight:700;color:var(--gold);text-align:center;margin-bottom:16px;"></div>
       <h2>שמור אותנו! 📱</h2>
       <div class="warning-banner">
         <span style="font-family:'Rubik',sans-serif;font-weight:700;color:var(--danger);font-size:15px;">⚠️ חובה לשמור את איש הקשר!</span><br>
@@ -287,7 +288,7 @@
       <button id="spin-btn" onclick="doSpin()">🎡 סובב!</button>
     </div>
     <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px;">סיבוב אחד בכל 24 שעות · בהצלחה!</p>
-    <button class="btn btn-ghost" style="margin-top:14px;" onclick="goTo('screen-contact', 2)">⟵ חזרה</button>
+    <button class="btn btn-ghost" style="margin-top:14px;" onclick="logout()">↩ התנתקות</button>
   </div>
 
   <!-- SCREEN 5: Win -->
@@ -302,7 +303,7 @@
         <div class="vip-expires">תוקף: <span class="timer" id="win-timer">02:00:00</span></div>
       </div>
       <p style="font-size:13px;color:var(--muted);line-height:1.6;">הראה את הקוד המהבהב לצוות בעסק כדי לממש את הפרס שלך. שים לב לתוקף!</p>
-      <button class="btn btn-ghost" style="margin-top:16px;" onclick="goTo('screen-wheel', 3)">⟵ חזרה לגלגל</button>
+      <button class="btn btn-ghost" style="margin-top:16px;" onclick="logout()">↩ התנתקות</button>
     </div>
   </div>
 
@@ -316,7 +317,7 @@
         <div class="next-spin-label">הסיבוב הבא עוד</div>
         <div class="next-spin-timer" id="next-spin-timer">24:00:00</div>
       </div>
-      <button class="btn btn-ghost" style="margin-top:16px;" onclick="goTo('screen-wheel', 3)">⟵ חזרה לגלגל</button>
+      <button class="btn btn-ghost" style="margin-top:16px;" onclick="logout()">↩ התנתקות</button>
     </div>
   </div>
 </div>
@@ -337,10 +338,50 @@ let currentAngle = 0;
 let wheelBenefits = [];
 let timerInterval;
 
-window.addEventListener('DOMContentLoaded', () => {
+function getGreeting(name) {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return `בוקר טוב, ${name}! 🌅`;
+  if (h >= 12 && h < 18) return `צהריים טובים, ${name}! ☀️`;
+  return `ערב טוב, ${name}! 🌙`;
+}
+
+function showGreeting(name) {
+  const el = document.getElementById('greeting-msg');
+  if (el) { el.textContent = getGreeting(name); el.style.display = 'block'; }
+}
+
+function logout() {
+  localStorage.removeItem('whl_token');
+  localStorage.removeItem('whl_name');
+  localStorage.removeItem('whl_spin_result');
+  token = null;
+  userName = null;
+  clearInterval(timerInterval);
+  goTo('screen-register', 0);
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
   if (token) {
     const persisted = checkPersistedState();
-    if (!persisted) { goTo('screen-wheel', 3); loadWheelData(); }
+    if (!persisted) {
+      try {
+        const r = await fetch(`${API}/api/user/status`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!r.ok) { logout(); return; }
+        const d = await r.json();
+        userName = d.name;
+        localStorage.setItem('whl_name', userName);
+        if (!d.canSpin) {
+          loadWheelData();
+          showLoss(d.nextSpinAt);
+        } else {
+          goTo('screen-wheel', 3);
+          loadWheelData();
+        }
+      } catch {
+        goTo('screen-wheel', 3);
+        loadWheelData();
+      }
+    }
   }
 });
 
@@ -401,6 +442,7 @@ async function sendOTP() {
       token = d.token; userName = d.name;
       localStorage.setItem('whl_token', token);
       localStorage.setItem('whl_name', userName);
+      showGreeting(userName);
       goTo('screen-contact', 2);
     } else {
       showError('reg-error', d.error || 'שגיאה בשליחה');
@@ -428,6 +470,7 @@ async function verifyOTP() {
       token = d.token; userName = d.name;
       localStorage.setItem('whl_token', token);
       localStorage.setItem('whl_name', userName);
+      showGreeting(userName);
       goTo('screen-contact', 2);
     } else {
       showError('otp-error', d.error || 'קוד שגוי');
@@ -611,7 +654,12 @@ function renderWin(businessName, prizeText, verificationCode, expires) {
   timerInterval = setInterval(() => {
     const diff = Math.max(0, expires - new Date());
     document.getElementById('win-timer').textContent = fmtMs(diff);
-    if (diff <= 0) { clearInterval(timerInterval); localStorage.removeItem('whl_spin_result'); }
+    if (diff <= 0) {
+      clearInterval(timerInterval);
+      localStorage.removeItem('whl_spin_result');
+      goTo('screen-wheel', 3);
+      loadWheelData();
+    }
   }, 1000);
   goTo('screen-win', 3);
 }
@@ -630,7 +678,12 @@ function restoreLoss(state) {
   timerInterval = setInterval(() => {
     const diff = Math.max(0, next - new Date());
     document.getElementById('next-spin-timer').textContent = fmtMs(diff);
-    if (diff <= 0) { clearInterval(timerInterval); localStorage.removeItem('whl_spin_result'); }
+    if (diff <= 0) {
+      clearInterval(timerInterval);
+      localStorage.removeItem('whl_spin_result');
+      goTo('screen-wheel', 3);
+      loadWheelData();
+    }
   }, 1000);
   goTo('screen-loss', 3);
 }
