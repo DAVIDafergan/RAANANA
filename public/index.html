@@ -434,9 +434,21 @@ function drawWheel() {
     ctx.rotate(a0 + slice / 2);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 11px Assistant, sans-serif';
-    const label = seg.prizeText.length > 12 ? seg.prizeText.slice(0, 11) + '…' : seg.prizeText;
-    ctx.fillText(label, r - 10, 4);
+
+    const maxLen = n > 8 ? 9 : 13;
+    if (seg.businessName) {
+      const biz = seg.businessName.length > maxLen ? seg.businessName.slice(0, maxLen - 1) + '…' : seg.businessName;
+      const prize = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen - 1) + '…' : seg.prizeText;
+      ctx.font = `bold ${n > 8 ? 9 : 11}px Assistant, sans-serif`;
+      ctx.fillText(biz, r - 10, -4);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = `${n > 8 ? 8 : 10}px Assistant, sans-serif`;
+      ctx.fillText(prize, r - 10, 8);
+    } else {
+      ctx.font = `bold ${n > 8 ? 10 : 12}px Assistant, sans-serif`;
+      const label = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen - 1) + '…' : seg.prizeText;
+      ctx.fillText(label, r - 10, 4);
+    }
     ctx.restore();
   });
 
@@ -487,11 +499,25 @@ async function callSpinAPI() {
     isSpinning = false;
     document.getElementById('spin-btn').disabled = false;
 
-    if (r.status === 429) {
+    if (r.status === 403) {
+      goTo('screen-loss', 3);
+      document.querySelector('.loss-emoji').textContent = '🔒';
+      document.querySelector('.loss-msg').textContent = 'הגלגל סגור כרגע';
+      document.querySelector('.loss-sub').textContent = d.error || 'הגלגל כבוי, חזרו מאוחר יותר';
+      document.querySelector('.next-spin-box').style.display = 'none';
+    } else if (r.status === 429) {
+      document.querySelector('.next-spin-box').style.display = '';
+      document.querySelector('.loss-emoji').textContent = '😅';
+      document.querySelector('.loss-msg').textContent = 'הפעם לא, חבר!';
+      document.querySelector('.loss-sub').innerHTML = 'אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב';
       showLoss(d.nextSpinAt);
     } else if (r.ok && d.isWin) {
       showWin(d);
     } else {
+      document.querySelector('.next-spin-box').style.display = '';
+      document.querySelector('.loss-emoji').textContent = '😅';
+      document.querySelector('.loss-msg').textContent = 'הפעם לא, חבר!';
+      document.querySelector('.loss-sub').innerHTML = 'אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב';
       showLoss(d.nextSpinAt);
     }
   } catch {
