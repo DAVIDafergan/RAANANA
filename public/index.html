@@ -196,13 +196,13 @@
   <div class="screen active" id="screen-register">
     <div class="card">
       <h2>בואו נתחיל! 👋</h2>
-      <div class="sub">הכנס פרטים ונשלח לך קוד אימות ב-SMS</div>
+      <div class="sub">הכנס פרטים כדי להתחיל</div>
       <label>שם מלא</label>
       <input type="text" id="reg-name" placeholder="ישראל ישראלי" autocomplete="name">
       <label>מספר טלפון</label>
       <input type="tel" id="reg-phone" placeholder="0501234567" autocomplete="tel" dir="ltr">
       <div id="reg-error" class="error-msg" style="display:none"></div>
-      <button class="btn btn-gold" id="reg-btn" onclick="sendOTP()">שלח קוד אימות →</button>
+      <button class="btn btn-gold" id="reg-btn" onclick="sendOTP()">המשך →</button>
     </div>
   </div>
 
@@ -321,7 +321,7 @@ async function sendOTP() {
   if (!regPhone || regPhone.length < 9) return showError('reg-error', 'נא להזין מספר טלפון תקין');
 
   const btn = document.getElementById('reg-btn');
-  btn.disabled = true; btn.textContent = 'שולח...';
+  btn.disabled = true; btn.textContent = 'טוען...';
 
   try {
     const r = await fetch(`${API}/api/auth/send-otp`, {
@@ -330,23 +330,17 @@ async function sendOTP() {
     });
     const d = await r.json();
     if (r.ok) {
-      if (d.autoVerified) {
-        token = d.token; userName = d.name;
-        localStorage.setItem('whl_token', token);
-        localStorage.setItem('whl_name', userName);
-        goTo('screen-wheel', 3);
-        loadWheelData();
-        return;
-      }
-      document.getElementById('otp-sub').textContent = `שלחנו SMS ל-${regPhone}`;
-      goTo('screen-otp', 1);
+      token = d.token; userName = d.name;
+      localStorage.setItem('whl_token', token);
+      localStorage.setItem('whl_name', userName);
+      goTo('screen-contact', 2);
     } else {
       showError('reg-error', d.error || 'שגיאה בשליחה');
     }
   } catch {
     showError('reg-error', 'בעיית חיבור, נסה שנית');
   }
-  btn.disabled = false; btn.textContent = 'שלח קוד אימות →';
+  btn.disabled = false; btn.textContent = 'המשך →';
 }
 
 async function verifyOTP() {

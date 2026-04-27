@@ -52,29 +52,15 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
       return res.status(400).json({ error: 'חסרים פרטים' });
     }
 
-    // Admin phone bypass – no OTP/SMS needed
-    if (normalizePhone(phone) === normalizePhone(ADMIN_PHONE)) {
-      let user = await User.findOne({ phone });
-      if (!user) {
-        user = await User.create({ phone, name, isVerified: true });
-      } else {
-        await User.updateOne({ _id: user._id }, { isVerified: true, name });
-        user = await User.findById(user._id);
-      }
-      const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
-      return res.json({ success: true, autoVerified: true, token, userId: user._id, name: user.name });
+    let user = await User.findOne({ phone });
+    if (!user) {
+      user = await User.create({ phone, name, isVerified: true });
+    } else {
+      await User.updateOne({ _id: user._id }, { isVerified: true, name });
+      user = await User.findById(user._id);
     }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-    await Otp.deleteMany({ phone });
-    await Otp.create({ phone, code, expiresAt });
-
-    // TODO: Replace with real SMS provider (InfoBip / Twilio)
-    // await smsClient.send({ to: phone, body: `קוד האימות שלך: ${code}` });
-    console.log(`📱 OTP for ${phone}: ${code}`);
-
-    res.json({ success: true });
+    const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
+    return res.json({ success: true, autoVerified: true, token, userId: user._id, name: user.name });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'שגיאת שרת' });
