@@ -19,6 +19,7 @@ app.use('/admin', express.static(path.join(__dirname, '../admin')));
 // Rate limiters
 const spinLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 const otpLimiter = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false });
+const adminLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
 
 // DB connect
 mongoose.connect(process.env.MONGO_URI)
@@ -169,7 +170,7 @@ app.post('/api/spin', auth, spinLimiter, async (req, res) => {
     if (winner) {
       await Benefit.updateOne({ _id: winner._id }, { $inc: { remainingStock: -1 } });
       const verificationCode = crypto.randomBytes(4).toString('hex').toUpperCase();
-      const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const spin = await Spin.create({
         userId: user._id, benefitId: winner._id,
         isWin: true, expiresAt, verificationCode, ipAddress: req.ip,
@@ -218,6 +219,19 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
       { $sort: { _id: 1 } }
     ]);
     res.json({ totalUsers, totalSpins, totalWins, spinsToday, spinsPerHour });
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+app.get('/api/admin/wins', adminAuth, adminLimiter, async (req, res) => {
+  try {
+    const wins = await Spin.find({ isWin: true })
+      .populate('userId', 'name phone')
+      .populate('benefitId', 'businessName prizeText')
+      .sort({ spinAt: -1 })
+      .limit(100);
+    res.json(wins);
   } catch (err) {
     res.status(500).json({ error: 'שגיאת שרת' });
   }

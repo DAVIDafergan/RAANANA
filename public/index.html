@@ -175,6 +175,25 @@
   }
   .warning-banner .warning-sub { font-size: 13px; color: var(--text); }
   .error-msg { color: var(--danger); font-size: 13px; text-align: center; margin-top: -8px; margin-bottom: 10px; }
+  .prize-ticker-wrap {
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(245,200,66,0.08), rgba(123,92,246,0.08));
+    border: 1px solid rgba(245,200,66,0.22);
+    border-radius: 10px; padding: 10px 0; margin-bottom: 14px; position: relative;
+  }
+  .prize-ticker-wrap::before, .prize-ticker-wrap::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 28px; z-index: 2; pointer-events: none;
+  }
+  .prize-ticker-wrap::before { left: 0; background: linear-gradient(to right, var(--card), transparent); }
+  .prize-ticker-wrap::after  { right: 0; background: linear-gradient(to left,  var(--card), transparent); }
+  .prize-ticker { display: flex; white-space: nowrap; animation: tickerScroll 20s linear infinite; }
+  @keyframes tickerScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  .ticker-item {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'Rubik', sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--gold); padding: 0 18px;
+  }
+  .ticker-sep { color: var(--accent2); padding: 0 4px; }
   @keyframes slideIn {
     from { opacity: 0; transform: translateY(18px) scale(0.98); }
     to   { opacity: 1; transform: translateY(0)    scale(1);    }
@@ -254,6 +273,10 @@
 
   <!-- SCREEN 4: Wheel -->
   <div class="screen" id="screen-wheel">
+    <!-- Prize ticker banner -->
+    <div class="prize-ticker-wrap" id="prize-ticker-wrap" style="display:none">
+      <div class="prize-ticker" id="prize-ticker"></div>
+    </div>
     <div class="card" style="padding:16px;">
       <div class="wheel-wrap">
         <div class="wheel-pointer"></div>
@@ -315,8 +338,32 @@ let wheelBenefits = [];
 let timerInterval;
 
 window.addEventListener('DOMContentLoaded', () => {
-  if (token) { goTo('screen-wheel', 3); loadWheelData(); }
+  if (token) {
+    const persisted = checkPersistedState();
+    if (!persisted) { goTo('screen-wheel', 3); loadWheelData(); }
+  }
 });
+
+function checkPersistedState() {
+  try {
+    const raw = localStorage.getItem('whl_spin_result');
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    const now = Date.now();
+    if (state.type === 'win' && state.expiresAt > now) {
+      loadWheelData();
+      restoreWin(state);
+      return true;
+    } else if (state.type === 'loss' && state.nextSpinAt > now) {
+      loadWheelData();
+      restoreLoss(state);
+      return true;
+    } else {
+      localStorage.removeItem('whl_spin_result');
+      return false;
+    }
+  } catch { return false; }
+}
 
 function goTo(screenId, dot) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -405,6 +452,19 @@ async function loadWheelData() {
     ];
   }
   drawWheel();
+  updateTicker();
+}
+
+function updateTicker() {
+  const tickerEl = document.getElementById('prize-ticker');
+  const wrapEl = document.getElementById('prize-ticker-wrap');
+  if (!tickerEl || !wrapEl || !wheelBenefits.length) return;
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  const items = wheelBenefits.map(b =>
+    `<span class="ticker-item"><span style="color:${esc(b.color || '#7B5CF6')}">●</span> ${esc(b.prizeText)}</span><span class="ticker-sep">✦</span>`
+  ).join('');
+  tickerEl.innerHTML = items + items; // duplicate for seamless loop
+  wrapEl.style.display = 'block';
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
@@ -528,27 +588,49 @@ async function callSpinAPI() {
 }
 
 function showWin(data) {
-  document.getElementById('win-business').textContent = data.prize.businessName;
-  document.getElementById('win-prize').textContent = data.prize.prizeText;
-  document.getElementById('win-code').textContent = data.verificationCode;
-  const expires = new Date(data.expiresAt);
+  localStorage.setItem('whl_spin_result', JSON.stringify({
+    type: 'win',
+    businessName: data.prize.businessName,
+    prizeText: data.prize.prizeText,
+    verificationCode: data.verificationCode,
+    expiresAt: new Date(data.expiresAt).getTime(),
+  }));
+  renderWin(data.prize.businessName, data.prize.prizeText, data.verificationCode, new Date(data.expiresAt));
+  launchConfetti();
+}
+
+function restoreWin(state) {
+  renderWin(state.businessName, state.prizeText, state.verificationCode, new Date(state.expiresAt));
+}
+
+function renderWin(businessName, prizeText, verificationCode, expires) {
+  document.getElementById('win-business').textContent = businessName;
+  document.getElementById('win-prize').textContent = prizeText;
+  document.getElementById('win-code').textContent = verificationCode;
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     const diff = Math.max(0, expires - new Date());
     document.getElementById('win-timer').textContent = fmtMs(diff);
-    if (diff <= 0) clearInterval(timerInterval);
+    if (diff <= 0) { clearInterval(timerInterval); localStorage.removeItem('whl_spin_result'); }
   }, 1000);
   goTo('screen-win', 3);
-  launchConfetti();
 }
 
 function showLoss(nextSpinAt) {
-  const next = new Date(nextSpinAt);
+  localStorage.setItem('whl_spin_result', JSON.stringify({
+    type: 'loss',
+    nextSpinAt: new Date(nextSpinAt).getTime(),
+  }));
+  restoreLoss({ nextSpinAt: new Date(nextSpinAt).getTime() });
+}
+
+function restoreLoss(state) {
+  const next = new Date(state.nextSpinAt);
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     const diff = Math.max(0, next - new Date());
     document.getElementById('next-spin-timer').textContent = fmtMs(diff);
-    if (diff <= 0) clearInterval(timerInterval);
+    if (diff <= 0) { clearInterval(timerInterval); localStorage.removeItem('whl_spin_result'); }
   }, 1000);
   goTo('screen-loss', 3);
 }
