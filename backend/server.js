@@ -20,6 +20,7 @@ app.use('/admin', express.static(path.join(__dirname, '../admin')));
 const spinLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 const otpLimiter = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false });
 const adminLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+const userLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
 
 // DB connect
 mongoose.connect(process.env.MONGO_URI)
@@ -118,6 +119,24 @@ function adminAuth(req, res, next) {
 }
 
 // ─── USER ROUTES ─────────────────────────────────────
+
+app.get('/api/user/status', auth, userLimiter, async (req, res) => {
+  try {
+    const user = req.user;
+    let canSpin = true;
+    let nextSpinAt = null;
+    if (user.lastSpin) {
+      const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
+      if (next > new Date()) {
+        canSpin = false;
+        nextSpinAt = next;
+      }
+    }
+    res.json({ name: user.name, canSpin, nextSpinAt });
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
 
 app.get('/api/benefits', auth, async (req, res) => {
   try {
