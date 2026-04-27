@@ -39,12 +39,14 @@ mongoose.connection.once('open', seedSettings);
 
 // ─── AUTH ───────────────────────────────────────────
 
-const ADMIN_PHONE = '0556674329';
+const ADMIN_PHONE = process.env.ADMIN_PHONE || '0556674329';
 
 app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   try {
     const { phone, name } = req.body;
-    if (!phone || !name) return res.status(400).json({ error: 'חסרים פרטים' });
+    if (!phone || !name || typeof phone !== 'string' || typeof name !== 'string') {
+      return res.status(400).json({ error: 'חסרים פרטים' });
+    }
 
     // Admin phone bypass – no OTP/SMS needed
     if (phone === ADMIN_PHONE) {
