@@ -237,6 +237,7 @@
       <a href="/raanana-wheel.vcf" download onclick="setTimeout(contactSaved, 500)">
         <button class="btn btn-gold">💾 שמור איש קשר לזכייה</button>
       </a>
+      <button class="btn btn-ghost" onclick="goTo('screen-otp', 1)">⟵ חזרה</button>
     </div>
   </div>
 
@@ -252,6 +253,7 @@
       <button id="spin-btn" onclick="doSpin()">🎡 סובב!</button>
     </div>
     <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px;">סיבוב אחד בכל 24 שעות · בהצלחה!</p>
+    <button class="btn btn-ghost" style="margin-top:12px;" onclick="goTo('screen-contact', 2)">⟵ חזרה</button>
   </div>
 
   <!-- SCREEN 5: Win -->
@@ -266,6 +268,7 @@
         <div class="vip-expires">תוקף: <span class="timer" id="win-timer">02:00:00</span></div>
       </div>
       <p style="font-size:13px;color:var(--muted);line-height:1.6;">הראה את הקוד המהבהב לצוות בעסק כדי לממש את הפרס שלך. שים לב לתוקף!</p>
+      <button class="btn btn-ghost" style="margin-top:16px;" onclick="goTo('screen-wheel', 3)">⟵ חזרה לגלגל</button>
     </div>
   </div>
 
@@ -279,6 +282,7 @@
         <div class="next-spin-label">הסיבוב הבא עוד</div>
         <div class="next-spin-timer" id="next-spin-timer">24:00:00</div>
       </div>
+      <button class="btn btn-ghost" style="margin-top:16px;" onclick="goTo('screen-wheel', 3)">⟵ חזרה לגלגל</button>
     </div>
   </div>
 </div>
