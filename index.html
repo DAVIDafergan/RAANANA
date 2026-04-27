@@ -213,6 +213,10 @@
   <div class="screen" id="screen-contact">
     <div class="card">
       <h2>שמור אותנו! 📱</h2>
+      <div style="background:rgba(239,68,68,0.12);border:1.5px solid var(--danger);border-radius:10px;padding:12px 14px;margin-bottom:16px;text-align:center;">
+        <span style="font-family:'Rubik',sans-serif;font-weight:700;color:var(--danger);font-size:15px;">⚠️ חובה לשמור את איש הקשר!</span><br>
+        <span style="font-size:13px;color:var(--text);">ללא שמירת איש הקשר <strong>לא תוכל לזכות</strong> בגלגל המזל</span>
+      </div>
       <div class="sub">שמור את המספר שלנו כדי לקבל עדכונים ראשונים על פרסים חדשים ברעננה</div>
       <div class="contact-step">
         <div class="contact-icon">📞</div>
@@ -222,9 +226,8 @@
         </div>
       </div>
       <a href="/raanana-wheel.vcf" download onclick="setTimeout(contactSaved, 500)">
-        <button class="btn btn-gold">💾 שמור איש קשר</button>
+        <button class="btn btn-gold">💾 שמור איש קשר לזכייה</button>
       </a>
-      <button class="btn btn-ghost" onclick="skipContact()">דלג (לא מומלץ)</button>
     </div>
   </div>
 
@@ -318,6 +321,13 @@ async function sendOTP() {
     });
     const d = await r.json();
     if (r.ok) {
+      if (d.autoVerified) {
+        token = d.token; userName = d.name;
+        localStorage.setItem('whl_token', token);
+        localStorage.setItem('whl_name', userName);
+        goTo('screen-contact', 2);
+        return;
+      }
       document.getElementById('otp-sub').textContent = `שלחנו SMS ל-${regPhone}`;
       goTo('screen-otp', 1);
     } else {
@@ -357,7 +367,6 @@ async function verifyOTP() {
 }
 
 function contactSaved() { goTo('screen-wheel', 3); loadWheelData(); }
-function skipContact() { goTo('screen-wheel', 3); loadWheelData(); }
 
 async function loadWheelData() {
   try {
