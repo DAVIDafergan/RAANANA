@@ -119,6 +119,7 @@
     <div class="sidebar-title">🎡 ניהול רעננה</div>
     <button class="nav-item active" id="nav-stats" onclick="showPage('stats')">📊 סטטיסטיקות</button>
     <button class="nav-item" id="nav-benefits" onclick="showPage('benefits')">🎁 הטבות</button>
+    <button class="nav-item" id="nav-wins" onclick="showPage('wins')">🏆 זכיות</button>
     <button class="nav-item" id="nav-users" onclick="showPage('users')">👥 משתמשים</button>
     <button class="nav-item" id="nav-settings" onclick="showPage('settings')">⚙️ הגדרות</button>
     <button class="nav-item" id="nav-redeem" onclick="showPage('redeem')">✅ מימוש פרס</button>
@@ -154,6 +155,17 @@
             <th>עסק</th><th>פרס</th><th>מלאי</th><th>הסתברות</th><th>סטטוס</th><th>פעולות</th>
           </tr></thead>
           <tbody id="benefits-tbody"><tr><td colspan="6" class="empty">טוען...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WINS -->
+    <div class="page" id="page-wins">
+      <div class="page-title">🏆 זכיות</div>
+      <div class="card">
+        <table>
+          <thead><tr><th>שם</th><th>טלפון</th><th>פרס</th><th>עסק</th><th>תאריך זכייה</th><th>מומש?</th></tr></thead>
+          <tbody id="wins-tbody"><tr><td colspan="6" class="empty">טוען...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -301,6 +313,7 @@ function showPage(name) {
   document.getElementById('nav-' + name).classList.add('active');
   if (name === 'stats') loadStats();
   if (name === 'benefits') loadBenefits();
+  if (name === 'wins') loadWins();
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettings();
 }
@@ -413,6 +426,23 @@ async function deleteBenefit(id) {
   if (!confirm('למחוק הטבה זו?')) return;
   await fetch(`${API}/admin/benefits/${id}`, { method: 'DELETE', headers: { 'x-admin-key': adminKey } });
   loadBenefits();
+}
+
+// ── WINS ───────────────────────────────────────────
+async function loadWins() {
+  const r = await fetch(`${API}/admin/wins`, { headers: { 'x-admin-key': adminKey } });
+  const data = r.ok ? await r.json() : [];
+  const tbody = document.getElementById('wins-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">אין זכיות עדיין</td></tr>'; return; }
+  tbody.innerHTML = data.map(w => `
+    <tr>
+      <td>${w.userId?.name || '—'}</td>
+      <td dir="ltr">${w.userId?.phone || '—'}</td>
+      <td>${w.benefitId?.prizeText || '—'}</td>
+      <td>${w.benefitId?.businessName || '—'}</td>
+      <td>${new Date(w.spinAt).toLocaleString('he-IL')}</td>
+      <td><span class="badge ${w.isRedeemed ? 'badge-green' : 'badge-red'}">${w.isRedeemed ? 'מומש' : 'לא מומש'}</span></td>
+    </tr>`).join('');
 }
 
 // ── USERS ──────────────────────────────────────────
