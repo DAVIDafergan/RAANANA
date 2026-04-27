@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0D0D1A">
+<title>גלגל המזל – רעננה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #F5C842;
+    --gold-dark: #C9952A;
+    --bg: #0D0D1A;
+    --card: #161628;
+    --card2: #1E1E35;
+    --accent: #7B5CF6;
+    --accent2: #A78BFA;
+    --text: #F0EFF8;
+    --muted: #8B8AA8;
+    --success: #22C55E;
+    --danger: #EF4444;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Assistant', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 45% 80%, rgba(255,255,255,0.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 60%, rgba(255,255,255,0.25) 0%, transparent 100%),
+      radial-gradient(2px 2px at 55% 45%, rgba(245,200,66,0.2) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { width: 100%; max-width: 480px; padding: 24px 20px; position: relative; z-index: 1; }
+  .header { text-align: center; margin-bottom: 28px; }
+  .logo-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--accent), #5A3FC0);
+    border-radius: 40px; padding: 6px 16px;
+    font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 13px; color: #fff;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-family: 'Rubik', sans-serif; font-size: 36px; font-weight: 900;
+    color: var(--gold); text-shadow: 0 0 40px rgba(245,200,66,0.3); line-height: 1.1;
+  }
+  .header p { color: var(--muted); font-size: 15px; margin-top: 6px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+  }
+  .card h2 { font-family: 'Rubik', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .card .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input[type=text], input[type=tel], input[type=number] {
+    width: 100%; background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+    padding: 13px 14px; color: var(--text);
+    font-family: 'Assistant', sans-serif; font-size: 16px;
+    margin-bottom: 14px; outline: none; transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .otp-input { letter-spacing: 8px; text-align: center; font-size: 28px; font-weight: 700; direction: ltr; }
+  .btn {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #1A1000; }
+  .btn-gold:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn-gold:active { transform: translateY(0); }
+  .btn-ghost {
+    background: transparent; color: var(--accent2);
+    border: 1px solid rgba(123,92,246,0.35); margin-top: 8px;
+  }
+  .btn-ghost:hover { background: rgba(123,92,246,0.08); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+  .contact-step {
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(135deg, rgba(123,92,246,0.12), rgba(123,92,246,0.04));
+    border: 1px solid rgba(123,92,246,0.25); border-radius: 12px;
+    padding: 16px; margin-bottom: 20px;
+  }
+  .contact-icon {
+    width: 50px; height: 50px; background: var(--accent);
+    border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; font-size: 22px; flex-shrink: 0;
+  }
+  .contact-step h3 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .contact-step p { font-size: 13px; color: var(--muted); }
+  .wheel-wrap { position: relative; display: flex; justify-content: center; margin: 10px 0; }
+  #wheel-canvas { border-radius: 50%; filter: drop-shadow(0 0 24px rgba(245,200,66,0.25)); }
+  .wheel-pointer {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 13px solid transparent; border-right: 13px solid transparent;
+    border-top: 26px solid var(--gold); z-index: 10;
+    filter: drop-shadow(0 2px 6px rgba(245,200,66,0.5));
+  }
+  .spin-btn-wrap { text-align: center; margin-top: 20px; }
+  #spin-btn {
+    width: auto; padding: 16px 52px; font-size: 19px; border-radius: 50px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #1A1000;
+    border: none; font-family: 'Rubik', sans-serif; font-weight: 900;
+    cursor: pointer; transition: all 0.2s;
+    box-shadow: 0 4px 24px rgba(245,200,66,0.35);
+  }
+  #spin-btn:hover { transform: scale(1.05); box-shadow: 0 6px 32px rgba(245,200,66,0.5); }
+  #spin-btn:disabled { opacity: 0.4; transform: none; cursor: not-allowed; }
+  .result-card { text-align: center; padding: 32px 24px; }
+  .win-icon { font-size: 68px; margin-bottom: 12px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes pop { 0% { transform: scale(0) rotate(-15deg); } 100% { transform: scale(1) rotate(0); } }
+  .prize-business { font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+  .prize-name { font-family: 'Rubik', sans-serif; font-size: 26px; font-weight: 900; color: var(--gold); margin-bottom: 20px; }
+  .vip-card {
+    background: linear-gradient(135deg, #1A1200, #2A1E00);
+    border: 2px solid var(--gold); border-radius: 14px;
+    padding: 22px; margin: 16px 0;
+    animation: glow-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes glow-pulse {
+    0%,100% { box-shadow: 0 0 10px rgba(245,200,66,0.2); border-color: #C9952A; }
+    50% { box-shadow: 0 0 35px rgba(245,200,66,0.65); border-color: #FFE066; }
+  }
+  .vip-label { font-size: 11px; color: #8B7A2A; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .vip-code { font-family: 'Rubik', sans-serif; font-size: 32px; font-weight: 900; letter-spacing: 5px; color: var(--gold); }
+  .vip-expires { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .timer { color: var(--danger); font-weight: 700; font-family: 'Rubik', sans-serif; }
+  .loss-emoji { font-size: 60px; margin-bottom: 12px; }
+  .loss-msg { font-family: 'Rubik', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .loss-sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
+  .next-spin-box {
+    background: rgba(123,92,246,0.1); border: 1px solid rgba(123,92,246,0.25);
+    border-radius: 12px; padding: 16px;
+  }
+  .next-spin-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .next-spin-timer { font-family: 'Rubik', sans-serif; font-size: 28px; font-weight: 700; color: var(--accent2); }
+  .steps { display: flex; justify-content: center; gap: 6px; margin-bottom: 24px; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.12); transition: all 0.3s; }
+  .step-dot.active { background: var(--gold); width: 24px; border-radius: 4px; }
+  .step-dot.done { background: var(--success); }
+  .confetti-piece {
+    position: fixed; width: 8px; height: 8px; border-radius: 2px;
+    pointer-events: none; animation: fall 2.5s ease-in forwards; z-index: 100;
+  }
+  @keyframes fall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+  .error-msg { color: var(--danger); font-size: 13px; text-align: center; margin-top: -8px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo-badge">🎡 רעננה</div>
+    <h1>גלגל המזל</h1>
+    <p>סובב כל יום וזכה בפרסים אמיתיים בעיר</p>
+  </div>
+
+  <div class="steps" id="steps-indicator">
+    <div class="step-dot active" id="dot-0"></div>
+    <div class="step-dot" id="dot-1"></div>
+    <div class="step-dot" id="dot-2"></div>
+    <div class="step-dot" id="dot-3"></div>
+  </div>
+
+  <!-- SCREEN 1: Register -->
+  <div class="screen active" id="screen-register">
+    <div class="card">
+      <h2>בואו נתחיל! 👋</h2>
+      <div class="sub">הכנס פרטים ונשלח לך קוד אימות ב-SMS</div>
+      <label>שם מלא</label>
+      <input type="text" id="reg-name" placeholder="ישראל ישראלי" autocomplete="name">
+      <label>מספר טלפון</label>
+      <input type="tel" id="reg-phone" placeholder="0501234567" autocomplete="tel" dir="ltr">
+      <div id="reg-error" class="error-msg" style="display:none"></div>
+      <button class="btn btn-gold" id="reg-btn" onclick="sendOTP()">שלח קוד אימות →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: OTP -->
+  <div class="screen" id="screen-otp">
+    <div class="card">
+      <h2>הזן קוד אימות</h2>
+      <div class="sub" id="otp-sub">שלחנו SMS למספר שלך</div>
+      <input type="number" id="otp-code" class="otp-input" placeholder="· · · · · ·" maxlength="6">
+      <div id="otp-error" class="error-msg" style="display:none"></div>
+      <button class="btn btn-gold" id="otp-btn" onclick="verifyOTP()">אמת קוד ✓</button>
+      <button class="btn btn-ghost" onclick="goTo('screen-register', 0)">⟵ שנה מספר</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: Save Contact -->
+  <div class="screen" id="screen-contact">
+    <div class="card">
+      <h2>שמור אותנו! 📱</h2>
+      <div class="sub">שמור את המספר שלנו כדי לקבל עדכונים ראשונים על פרסים חדשים ברעננה</div>
+      <div class="contact-step">
+        <div class="contact-icon">📞</div>
+        <div>
+          <h3>גלגל המזל רעננה</h3>
+          <p>055-667-4329</p>
+        </div>
+      </div>
+      <a href="/raanana-wheel.vcf" download onclick="setTimeout(contactSaved, 500)">
+        <button class="btn btn-gold">💾 שמור איש קשר</button>
+      </a>
+      <button class="btn btn-ghost" onclick="skipContact()">דלג (לא מומלץ)</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: Wheel -->
+  <div class="screen" id="screen-wheel">
+    <div class="card" style="padding:16px;">
+      <div class="wheel-wrap">
+        <div class="wheel-pointer"></div>
+        <canvas id="wheel-canvas" width="320" height="320"></canvas>
+      </div>
+    </div>
+    <div class="spin-btn-wrap">
+      <button id="spin-btn" onclick="doSpin()">🎡 סובב!</button>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px;">סיבוב אחד בכל 24 שעות · בהצלחה!</p>
+  </div>
+
+  <!-- SCREEN 5: Win -->
+  <div class="screen" id="screen-win">
+    <div class="card result-card">
+      <div class="win-icon">🎉</div>
+      <p class="prize-business" id="win-business"></p>
+      <p class="prize-name" id="win-prize"></p>
+      <div class="vip-card">
+        <div class="vip-label">הצג קוד זה בעסק</div>
+        <div class="vip-code" id="win-code"></div>
+        <div class="vip-expires">תוקף: <span class="timer" id="win-timer">02:00:00</span></div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;">הראה את הקוד המהבהב לצוות בעסק כדי לממש את הפרס שלך. שים לב לתוקף!</p>
+    </div>
+  </div>
+
+  <!-- SCREEN 6: Loss -->
+  <div class="screen" id="screen-loss">
+    <div class="card result-card">
+      <div class="loss-emoji">😅</div>
+      <div class="loss-msg">הפעם לא, חבר!</div>
+      <div class="loss-sub">אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב</div>
+      <div class="next-spin-box">
+        <div class="next-spin-label">הסיבוב הבא עוד</div>
+        <div class="next-spin-timer" id="next-spin-timer">24:00:00</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';  // ריק = אותו origin (Express מגיש את ה-HTML)
+let token = localStorage.getItem('whl_token');
+let userName = localStorage.getItem('whl_name');
+let regPhone = '', regName = '';
+let isSpinning = false;
+let currentAngle = 0;
+let wheelBenefits = [];
+let timerInterval;
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (token) { goTo('screen-wheel', 3); loadWheelData(); }
+});
+
+function goTo(screenId, dot) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  document.querySelectorAll('.step-dot').forEach((d, i) => {
+    d.className = 'step-dot';
+    if (i < dot) d.classList.add('done');
+    else if (i === dot) d.classList.add('active');
+  });
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+async function sendOTP() {
+  regName = document.getElementById('reg-name').value.trim();
+  regPhone = document.getElementById('reg-phone').value.trim();
+  if (!regName) return showError('reg-error', 'נא להזין שם מלא');
+  if (!regPhone || regPhone.length < 9) return showError('reg-error', 'נא להזין מספר טלפון תקין');
+
+  const btn = document.getElementById('reg-btn');
+  btn.disabled = true; btn.textContent = 'שולח...';
+
+  try {
+    const r = await fetch(`${API}/api/auth/send-otp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: regPhone, name: regName })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      document.getElementById('otp-sub').textContent = `שלחנו SMS ל-${regPhone}`;
+      goTo('screen-otp', 1);
+    } else {
+      showError('reg-error', d.error || 'שגיאה בשליחה');
+    }
+  } catch {
+    showError('reg-error', 'בעיית חיבור, נסה שנית');
+  }
+  btn.disabled = false; btn.textContent = 'שלח קוד אימות →';
+}
+
+async function verifyOTP() {
+  const code = document.getElementById('otp-code').value.trim();
+  if (code.length !== 6) return showError('otp-error', 'קוד חייב להיות 6 ספרות');
+
+  const btn = document.getElementById('otp-btn');
+  btn.disabled = true; btn.textContent = 'מאמת...';
+
+  try {
+    const r = await fetch(`${API}/api/auth/verify-otp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: regPhone, name: regName, code })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      token = d.token; userName = d.name;
+      localStorage.setItem('whl_token', token);
+      localStorage.setItem('whl_name', userName);
+      goTo('screen-contact', 2);
+    } else {
+      showError('otp-error', d.error || 'קוד שגוי');
+    }
+  } catch {
+    showError('otp-error', 'בעיית חיבור, נסה שנית');
+  }
+  btn.disabled = false; btn.textContent = 'אמת קוד ✓';
+}
+
+function contactSaved() { goTo('screen-wheel', 3); loadWheelData(); }
+function skipContact() { goTo('screen-wheel', 3); loadWheelData(); }
+
+async function loadWheelData() {
+  try {
+    const r = await fetch(`${API}/api/benefits`, { headers: { Authorization: `Bearer ${token}` } });
+    const d = await r.json();
+    wheelBenefits = d.benefits || [];
+  } catch {
+    wheelBenefits = [
+      { businessName: 'טוען...', prizeText: 'פרס', color: '#7B5CF6' },
+      { businessName: 'עסקים', prizeText: 'הנחה', color: '#E85D04' },
+    ];
+  }
+  drawWheel();
+}
+
+const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
+function drawWheel() {
+  const canvas = document.getElementById('wheel-canvas');
+  const ctx = canvas.getContext('2d');
+  const cx = 160, cy = 160, r = 150;
+  const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
+  const n = segments.length;
+  const slice = (Math.PI * 2) / n;
+
+  ctx.clearRect(0, 0, 320, 320);
+  segments.forEach((seg, i) => {
+    const a0 = currentAngle + i * slice, a1 = a0 + slice;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, a0, a1);
+    ctx.closePath();
+    ctx.fillStyle = seg.color || COLORS[i % COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(a0 + slice / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px Assistant, sans-serif';
+    const label = seg.prizeText.length > 12 ? seg.prizeText.slice(0, 11) + '…' : seg.prizeText;
+    ctx.fillText(label, r - 10, 4);
+    ctx.restore();
+  });
+
+  // Center
+  ctx.beginPath();
+  ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+  ctx.fillStyle = '#0D0D1A';
+  ctx.fill();
+  ctx.strokeStyle = '#F5C842';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = '#F5C842';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🎡', cx, cy);
+}
+
+async function doSpin() {
+  if (isSpinning) return;
+  isSpinning = true;
+  document.getElementById('spin-btn').disabled = true;
+
+  const totalRot = Math.PI * 2 * (5 + Math.random() * 6);
+  const duration = 4500;
+  const startAngle = currentAngle;
+  const start = performance.now();
+
+  function animate(now) {
+    const elapsed = now - start;
+    const p = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 4);
+    currentAngle = startAngle + totalRot * ease;
+    drawWheel();
+    if (p < 1) { requestAnimationFrame(animate); }
+    else { callSpinAPI(); }
+  }
+  requestAnimationFrame(animate);
+}
+
+async function callSpinAPI() {
+  try {
+    const r = await fetch(`${API}/api/spin`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    });
+    const d = await r.json();
+    isSpinning = false;
+    document.getElementById('spin-btn').disabled = false;
+
+    if (r.status === 429) {
+      showLoss(d.nextSpinAt);
+    } else if (r.ok && d.isWin) {
+      showWin(d);
+    } else {
+      showLoss(d.nextSpinAt);
+    }
+  } catch {
+    isSpinning = false;
+    document.getElementById('spin-btn').disabled = false;
+    alert('בעיית חיבור, נסה שנית');
+  }
+}
+
+function showWin(data) {
+  document.getElementById('win-business').textContent = data.prize.businessName;
+  document.getElementById('win-prize').textContent = data.prize.prizeText;
+  document.getElementById('win-code').textContent = data.verificationCode;
+  const expires = new Date(data.expiresAt);
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const diff = Math.max(0, expires - new Date());
+    document.getElementById('win-timer').textContent = fmtMs(diff);
+    if (diff <= 0) clearInterval(timerInterval);
+  }, 1000);
+  goTo('screen-win', 3);
+  launchConfetti();
+}
+
+function showLoss(nextSpinAt) {
+  const next = new Date(nextSpinAt);
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const diff = Math.max(0, next - new Date());
+    document.getElementById('next-spin-timer').textContent = fmtMs(diff);
+    if (diff <= 0) clearInterval(timerInterval);
+  }, 1000);
+  goTo('screen-loss', 3);
+}
+
+function fmtMs(ms) {
+  const h = Math.floor(ms / 3600000).toString().padStart(2, '0');
+  const m = Math.floor((ms % 3600000) / 60000).toString().padStart(2, '0');
+  const s = Math.floor((ms % 60000) / 1000).toString().padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
+function launchConfetti() {
+  const colors = ['#F5C842','#7B5CF6','#22C55E','#EF4444','#60A5FA','#F472B6'];
+  for (let i = 0; i < 70; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.cssText = `left:${Math.random()*100}vw;top:-10px;background:${colors[Math.floor(Math.random()*colors.length)]};animation-delay:${Math.random()*0.6}s;animation-duration:${2+Math.random()*1.5}s;transform:rotate(${Math.random()*360}deg);border-radius:${Math.random()>0.5?'50%':'2px'}`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }, Math.random() * 600);
+  }
+}
+</script>
+</body>
+</html>
