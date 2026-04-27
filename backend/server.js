@@ -41,6 +41,10 @@ mongoose.connection.once('open', seedSettings);
 
 const ADMIN_PHONE = process.env.ADMIN_PHONE || '0556674329';
 
+function normalizePhone(phone) {
+  return phone.replace(/\D/g, '');
+}
+
 app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   try {
     const { phone, name } = req.body;
@@ -49,7 +53,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     }
 
     // Admin phone bypass – no OTP/SMS needed
-    if (phone === ADMIN_PHONE) {
+    if (normalizePhone(phone) === normalizePhone(ADMIN_PHONE)) {
       let user = await User.findOne({ phone });
       if (!user) {
         user = await User.create({ phone, name, isVerified: true });
