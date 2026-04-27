@@ -44,6 +44,37 @@
       radial-gradient(2px 2px at 55% 45%, rgba(245,200,66,0.2) 0%, transparent 100%);
     pointer-events: none;
     z-index: 0;
+    animation: twinkle 4s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle {
+    0%   { opacity: 0.6; }
+    50%  { opacity: 1; }
+    100% { opacity: 0.7; }
+  }
+  .bg-particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 0;
+    animation: float-up linear infinite;
+    user-select: none;
+  }
+  @keyframes float-up {
+    0%   { transform: translateY(110vh) rotate(0deg) scale(0.8); opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 0.6; }
+    100% { transform: translateY(-10vh) rotate(400deg) scale(1.1); opacity: 0; }
+  }
+  .bg-orb {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    animation: orb-drift ease-in-out infinite alternate;
+    filter: blur(60px);
+  }
+  @keyframes orb-drift {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(30px, -40px) scale(1.15); }
   }
   .container { width: 100%; max-width: 480px; padding: 24px 20px; position: relative; z-index: 1; }
   .header { text-align: center; margin-bottom: 28px; }
@@ -107,7 +138,11 @@
   .contact-step h3 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
   .contact-step p { font-size: 13px; color: var(--muted); }
   .wheel-wrap { position: relative; display: flex; justify-content: center; margin: 10px 0; }
-  #wheel-canvas { border-radius: 50%; filter: drop-shadow(0 0 24px rgba(245,200,66,0.25)); }
+  #wheel-canvas { border-radius: 50%; filter: drop-shadow(0 0 24px rgba(245,200,66,0.25)); animation: wheel-glow 3s ease-in-out infinite alternate; }
+  @keyframes wheel-glow {
+    0%   { filter: drop-shadow(0 0 18px rgba(245,200,66,0.2)); }
+    100% { filter: drop-shadow(0 0 38px rgba(245,200,66,0.55)); }
+  }
   .wheel-pointer {
     position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
     width: 0; height: 0;
@@ -122,6 +157,11 @@
     border: none; font-family: 'Rubik', sans-serif; font-weight: 900;
     cursor: pointer; transition: all 0.2s;
     box-shadow: 0 4px 24px rgba(245,200,66,0.35);
+    animation: btn-pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes btn-pulse {
+    0%,100% { box-shadow: 0 4px 24px rgba(245,200,66,0.35); }
+    50%      { box-shadow: 0 6px 40px rgba(245,200,66,0.7), 0 0 0 6px rgba(245,200,66,0.12); }
   }
   #spin-btn:hover { transform: scale(1.05); box-shadow: 0 6px 32px rgba(245,200,66,0.5); }
   #spin-btn:disabled { opacity: 0.4; transform: none; cursor: not-allowed; }
@@ -178,6 +218,9 @@
 </style>
 </head>
 <body>
+<div class="bg-orb" style="width:300px;height:300px;background:rgba(123,92,246,0.12);top:-80px;left:-100px;animation-duration:8s;"></div>
+<div class="bg-orb" style="width:250px;height:250px;background:rgba(245,200,66,0.08);bottom:60px;right:-80px;animation-duration:11s;animation-delay:2s;"></div>
+<div class="bg-orb" style="width:180px;height:180px;background:rgba(34,197,94,0.07);top:40%;left:-60px;animation-duration:9s;animation-delay:4s;"></div>
 <div class="container">
   <div class="header">
     <div class="logo-badge">🎡 רעננה</div>
@@ -414,25 +457,48 @@ function drawWheel() {
     ctx.closePath();
     ctx.fillStyle = seg.color || COLORS[i % COLORS.length];
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = 1.5;
+
+    // Separator lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Outer ring highlight
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 1, a0, a1);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(a0 + slice / 2);
     ctx.textAlign = 'right';
+
+    // Text shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 4;
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 11px Assistant, sans-serif';
+    ctx.font = 'bold 13px Assistant, sans-serif';
     const label = seg.prizeText.length > 12 ? seg.prizeText.slice(0, 11) + '…' : seg.prizeText;
-    ctx.fillText(label, r - 10, 4);
+    ctx.fillText(label, r - 8, 5);
     ctx.restore();
   });
 
+  // Outer border ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(245,200,66,0.5)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
   // Center
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 24);
+  grad.addColorStop(0, '#2A2040');
+  grad.addColorStop(1, '#0D0D1A');
   ctx.beginPath();
   ctx.arc(cx, cy, 24, 0, Math.PI * 2);
-  ctx.fillStyle = '#0D0D1A';
+  ctx.fillStyle = grad;
   ctx.fill();
   ctx.strokeStyle = '#F5C842';
   ctx.lineWidth = 3;
@@ -441,6 +507,7 @@ function drawWheel() {
   ctx.fillStyle = '#F5C842';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.shadowBlur = 0;
   ctx.fillText('🎡', cx, cy);
 }
 
@@ -449,45 +516,74 @@ async function doSpin() {
   isSpinning = true;
   document.getElementById('spin-btn').disabled = true;
 
-  const totalRot = Math.PI * 2 * (5 + Math.random() * 6);
-  const duration = 4500;
-  const startAngle = currentAngle;
-  const start = performance.now();
-
-  function animate(now) {
-    const elapsed = now - start;
-    const p = Math.min(elapsed / duration, 1);
-    const ease = 1 - Math.pow(1 - p, 4);
-    currentAngle = startAngle + totalRot * ease;
-    drawWheel();
-    if (p < 1) { requestAnimationFrame(animate); }
-    else { callSpinAPI(); }
-  }
-  requestAnimationFrame(animate);
-}
-
-async function callSpinAPI() {
+  // Call the API first so we know the real outcome
+  let result;
   try {
     const r = await fetch(`${API}/api/spin`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
     });
     const d = await r.json();
-    isSpinning = false;
-    document.getElementById('spin-btn').disabled = false;
-
-    if (r.status === 429) {
-      showLoss(d.nextSpinAt);
-    } else if (r.ok && d.isWin) {
-      showWin(d);
-    } else {
-      showLoss(d.nextSpinAt);
-    }
+    result = { status: r.status, ok: r.ok, data: d };
   } catch {
     isSpinning = false;
     document.getElementById('spin-btn').disabled = false;
     alert('בעיית חיבור, נסה שנית');
+    return;
   }
+
+  // Determine which segment to land on
+  const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
+  const n = segments.length;
+  const slice = (Math.PI * 2) / n;
+  let targetIdx = n - 1; // default: "נסה שוב"
+
+  if (result.ok && result.data.isWin) {
+    const prizeText = result.data.prize.prizeText;
+    const found = wheelBenefits.findIndex(b => b.prizeText === prizeText);
+    if (found !== -1) targetIdx = found;
+    else targetIdx = Math.floor(Math.random() * (n - 1)); // any prize segment
+  }
+
+  // Pointer is at top (angle = -π/2). Center of segment targetIdx must hit it.
+  // Center angle of segment i = currentAngle + i*slice + slice/2
+  // We need: finalAngle + targetIdx*slice + slice/2 ≡ -π/2  (mod 2π)
+  const targetCenter = -Math.PI / 2 - targetIdx * slice - slice / 2;
+  const jitter = (Math.random() - 0.5) * slice * 0.5; // slight randomness within segment
+  let delta = (targetCenter + jitter - currentAngle) % (Math.PI * 2);
+  if (delta < 0) delta += Math.PI * 2;
+  if (delta < Math.PI * 0.5) delta += Math.PI * 2; // ensure meaningful final rotation
+
+  // Add fast initial full rotations (8-11) for excitement
+  const numExtraRots = 8 + Math.floor(Math.random() * 4);
+  const totalRot = delta + Math.PI * 2 * numExtraRots;
+
+  const duration = 4200;
+  const startAngle = currentAngle;
+  const start = performance.now();
+
+  function animate(now) {
+    const elapsed = now - start;
+    const p = Math.min(elapsed / duration, 1);
+    // Ease-out cubic (faster start, smooth stop)
+    const ease = 1 - Math.pow(1 - p, 3);
+    currentAngle = startAngle + totalRot * ease;
+    drawWheel();
+    if (p < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      isSpinning = false;
+      document.getElementById('spin-btn').disabled = false;
+      if (result.status === 429) {
+        showLoss(result.data.nextSpinAt);
+      } else if (result.ok && result.data.isWin) {
+        showWin(result.data);
+      } else {
+        showLoss(result.data.nextSpinAt);
+      }
+    }
+  }
+  requestAnimationFrame(animate);
 }
 
 function showWin(data) {
@@ -535,6 +631,25 @@ function launchConfetti() {
     }, Math.random() * 600);
   }
 }
+
+// Floating background particles for ambient atmosphere
+(function createBgParticles() {
+  const symbols = ['⭐','✨','🌟','💫','🎡','🎉','🏆','🎊'];
+  for (let i = 0; i < 18; i++) {
+    const el = document.createElement('div');
+    el.className = 'bg-particle';
+    el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    const size = 10 + Math.random() * 18;
+    el.style.cssText = [
+      `left:${Math.random() * 100}vw`,
+      `font-size:${size}px`,
+      `opacity:${0.08 + Math.random() * 0.18}`,
+      `animation-duration:${10 + Math.random() * 14}s`,
+      `animation-delay:${Math.random() * 12}s`,
+    ].join(';');
+    document.body.appendChild(el);
+  }
+})();
 </script>
 </body>
 </html>
