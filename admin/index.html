@@ -134,6 +134,7 @@
         <div class="stat-card"><div class="stat-label">משתמשים</div><div class="stat-val" id="s-users">—</div></div>
         <div class="stat-card"><div class="stat-label">סיבובים סה"כ</div><div class="stat-val" id="s-spins">—</div></div>
         <div class="stat-card"><div class="stat-label">זכיות סה"כ</div><div class="stat-val" id="s-wins">—</div></div>
+        <div class="stat-card"><div class="stat-label">אחוז זכיות</div><div class="stat-val" id="s-winrate">—</div></div>
         <div class="stat-card"><div class="stat-label">סיבובים היום</div><div class="stat-val" id="s-today">—</div></div>
       </div>
       <div class="card">
@@ -313,6 +314,7 @@ async function loadStats() {
   document.getElementById('s-users').textContent = d.totalUsers ?? 0;
   document.getElementById('s-spins').textContent = d.totalSpins ?? 0;
   document.getElementById('s-wins').textContent = d.totalWins ?? 0;
+  document.getElementById('s-winrate').textContent = d.totalSpins > 0 ? ((d.totalWins / d.totalSpins) * 100).toFixed(1) + '%' : '0%';
   document.getElementById('s-today').textContent = d.spinsToday ?? 0;
   drawChart(d.spinsPerHour || []);
 }
@@ -442,11 +444,25 @@ async function loadSettings() {
 }
 
 async function saveSetting(key, value) {
-  await fetch(`${API}/admin/settings`, {
-    method: 'PUT',
-    headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, value })
-  });
+  try {
+    const r = await fetch(`${API}/admin/settings`, {
+      method: 'PUT',
+      headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    });
+    if (r.ok) showToast('ההגדרה נשמרה ✓');
+    else showToast('שגיאה בשמירה', true);
+  } catch {
+    showToast('בעיית חיבור', true);
+  }
+}
+
+function showToast(msg, isError = false) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${isError ? 'var(--danger)' : 'var(--success)'};color:#fff;padding:10px 22px;border-radius:8px;font-family:'Assistant',sans-serif;font-size:14px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.3);pointer-events:none;`;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
 }
 
 // ── REDEEM ─────────────────────────────────────────
