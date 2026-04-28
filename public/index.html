@@ -263,7 +263,7 @@
       <input type="number" id="otp-code" class="otp-input" placeholder="· · · · · ·" maxlength="6">
       <div id="otp-error" class="error-msg" style="display:none"></div>
       <button class="btn btn-gold" id="otp-btn" onclick="verifyOTP()">אמת קוד ✓</button>
-      <button class="btn btn-ghost" onclick="goTo('screen-register', 0)">⟵ שנה מספר</button>
+      <button class="btn btn-ghost" onclick="goTo('screen-register', 1)">⟵ שנה מספר</button>
     </div>
   </div>
 
@@ -545,22 +545,30 @@ async function sendOTP() {
     });
     const d = await r.json();
     if (r.ok) {
-      token = d.token; userName = d.name;
-      localStorage.setItem('whl_token', token);
-      localStorage.setItem('whl_name', userName);
-      if (d.isReturningUser) {
-        loadWheelData();
-        if (!d.canSpin) {
-          showWheelGreeting(userName, true);
-          showLoss(d.nextSpinAt);
-        } else {
-          showWheelGreeting(userName, true);
-          goTo('screen-wheel', 3);
-          if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
-        }
+      if (d.otpSent) {
+        // New user: OTP sent via SMS – navigate to OTP screen
+        const sub = document.getElementById('otp-sub');
+        if (sub) sub.textContent = `שלחנו קוד אימות ב-SMS למספר ${regPhone}`;
+        goTo('screen-otp', 1);
       } else {
-        showGreeting(userName);
-        goTo('screen-contact', 2);
+        // Returning user who typed their name again: log in directly
+        token = d.token; userName = d.name;
+        localStorage.setItem('whl_token', token);
+        localStorage.setItem('whl_name', userName);
+        if (d.isReturningUser) {
+          loadWheelData();
+          if (!d.canSpin) {
+            showWheelGreeting(userName, true);
+            showLoss(d.nextSpinAt);
+          } else {
+            showWheelGreeting(userName, true);
+            goTo('screen-wheel', 3);
+            if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
+          }
+        } else {
+          showGreeting(userName);
+          goTo('screen-contact', 2);
+        }
       }
     } else {
       showError('reg-error', d.error || 'שגיאה בשליחה');
@@ -588,8 +596,19 @@ async function verifyOTP() {
       token = d.token; userName = d.name;
       localStorage.setItem('whl_token', token);
       localStorage.setItem('whl_name', userName);
-      showGreeting(userName);
-      goTo('screen-contact', 2);
+      if (d.isNewUser) {
+        showGreeting(userName);
+        goTo('screen-contact', 2);
+      } else if (!d.canSpin) {
+        loadWheelData();
+        showWheelGreeting(userName, false);
+        showLoss(d.nextSpinAt);
+      } else {
+        showWheelGreeting(userName, false);
+        goTo('screen-wheel', 3);
+        loadWheelData();
+        if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
+      }
     } else {
       showError('otp-error', d.error || 'קוד שגוי');
     }
