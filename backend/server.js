@@ -85,18 +85,26 @@ function normalizePhone(phone) {
 app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   try {
     const { phone, name } = req.body;
-    if (!phone || !name || typeof phone !== 'string' || typeof name !== 'string') {
-      return res.status(400).json({ error: 'חסרים פרטים' });
+    if (!phone || typeof phone !== 'string') {
+      return res.status(400).json({ error: 'חסר מספר טלפון' });
     }
 
     const normalizedPhone = normalizePhone(phone);
 
     let user = await User.findOne({ phone: normalizedPhone });
+
+    // Phone-only login: if user not found and no name was provided, signal new user
+    if (!user && (!name || typeof name !== 'string' || !name.trim())) {
+      return res.json({ isNewUser: true });
+    }
+
     const isReturningUser = !!user;
     if (!user) {
-      user = await User.create({ phone: normalizedPhone, name, isVerified: true });
+      user = await User.create({ phone: normalizedPhone, name: name.trim(), isVerified: true });
     } else {
-      await User.updateOne({ _id: user._id }, { isVerified: true, name });
+      const upd = { isVerified: true };
+      if (name && typeof name === 'string' && name.trim()) upd.name = name.trim();
+      await User.updateOne({ _id: user._id }, upd);
       user = await User.findById(user._id);
     }
 
