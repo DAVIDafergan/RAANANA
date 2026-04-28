@@ -442,8 +442,17 @@ async function sendOTP() {
       token = d.token; userName = d.name;
       localStorage.setItem('whl_token', token);
       localStorage.setItem('whl_name', userName);
-      showGreeting(userName);
-      goTo('screen-contact', 2);
+      if (d.isReturningUser) {
+        loadWheelData();
+        if (!d.canSpin) {
+          showLoss(d.nextSpinAt);
+        } else {
+          goTo('screen-wheel', 3);
+        }
+      } else {
+        showGreeting(userName);
+        goTo('screen-contact', 2);
+      }
     } else {
       showError('reg-error', d.error || 'שגיאה בשליחה');
     }
