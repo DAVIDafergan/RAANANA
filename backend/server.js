@@ -163,6 +163,42 @@ async function sendSmsOtp(phone, code) {
   });
 }
 
+// ─── QUICK LOGIN (returning users – phone only, no OTP) ─────────────────────
+
+app.post('/api/auth/quick-login', userLimiter, async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone || typeof phone !== 'string') {
+      return res.status(400).json({ error: 'חסר מספר טלפון' });
+    }
+    const normalizedPhone = normalizePhone(phone);
+    const user = await User.findOne({ phone: normalizedPhone, isVerified: true });
+    if (!user) {
+      return res.json({ isNewUser: true });
+    }
+
+    let canSpin = true;
+    let nextSpinAt = null;
+    if (user.lastSpin) {
+      const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
+      if (next > new Date()) {
+        if (user.bonusSpins > 0) {
+          canSpin = true;
+        } else {
+          canSpin = false;
+          nextSpinAt = next;
+        }
+      }
+    }
+
+    const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
+    return res.json({ success: true, token, userId: user._id, name: user.name, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
 // ─── FIREBASE AUTH ENDPOINT ─────────────────────────
 
 app.post('/api/auth/firebase-verify', otpLimiter, async (req, res) => {

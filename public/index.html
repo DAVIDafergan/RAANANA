@@ -470,19 +470,42 @@ async function loginWithPhone() {
   if (!phone || phone.replace(/\D/g,'').length < 9) return showError('login-error', 'נא להזין מספר טלפון תקין');
 
   const btn = document.getElementById('login-btn');
-  btn.disabled = true; btn.textContent = 'שולח SMS...';
+  btn.disabled = true; btn.textContent = 'מתחבר...';
 
   try {
-    setupRecaptcha();
-    const phoneE164 = normalizePhoneForFirebase(phone);
-    regPhone = phone;
-    confirmationResult = await fbAuth.signInWithPhoneNumber(phoneE164, window.recaptchaVerifier);
-    document.getElementById('otp-sub').textContent = `שלחנו SMS ל-${phone}`;
-    goTo('screen-otp', 1);
+    const r = await fetch(`${API}/api/auth/quick-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    const d = await r.json();
+
+    if (!r.ok) {
+      showError('login-error', d.error || 'שגיאה, נסה שנית');
+    } else if (d.isNewUser) {
+      // First-time user – route to registration (OTP + name)
+      document.getElementById('reg-phone').value = phone;
+      document.getElementById('reg-name').value = '';
+      goTo('screen-register', 0);
+    } else {
+      // Returning user – log in directly without OTP
+      token = d.token; userName = d.name;
+      localStorage.setItem('whl_token', token);
+      localStorage.setItem('whl_name', userName);
+      if (!d.canSpin) {
+        loadWheelData();
+        showWheelGreeting(userName, true);
+        showLoss(d.nextSpinAt);
+      } else {
+        showWheelGreeting(userName, true);
+        goTo('screen-wheel', 3);
+        loadWheelData();
+        if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
+      }
+    }
   } catch (err) {
-    console.error('loginWithPhone error – code:', err.code, '| message:', err.message);
-    showError('login-error', getFirebaseError(err));
-    resetRecaptcha();
+    console.error('loginWithPhone error:', err);
+    showError('login-error', 'בעיית חיבור, נסה שנית');
   }
   btn.disabled = false; btn.textContent = 'כניסה →';
 }
