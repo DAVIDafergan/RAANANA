@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
+const https = require('https');
 const multer = require('multer');
 const admin = require('firebase-admin');
 const { User, Business, Benefit, Spin, Otp, Settings } = require('./models');
@@ -99,6 +100,55 @@ function normalizePhone(phone) {
   return normalized;
 }
 
+// Convert a local Israeli number (0XX…) to E.164 (+972XX…)
+function toE164(phone) {
+  if (phone.startsWith('0')) return '+972' + phone.slice(1);
+  if (!phone.startsWith('+')) return '+' + phone;
+  return phone;
+}
+
+// Send OTP via Twilio REST API.
+// If Twilio credentials are not configured, falls back to console log (dev mode).
+async function sendSmsOtp(phone, code) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const fromPhone  = process.env.TWILIO_FROM_PHONE;
+
+  if (!accountSid || !authToken || !fromPhone) {
+    console.log(`[DEV] OTP for ${phone}: ${code}`);
+    return;
+  }
+
+  const toPhone  = toE164(phone);
+  const body     = `קוד האימות שלך לגלגל המזל רעננה: ${code}`;
+  const postData = new URLSearchParams({ To: toPhone, From: fromPhone, Body: body }).toString();
+  const auth     = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.twilio.com',
+      path: `/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(postData),
+      },
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve();
+        else reject(new Error(`SMS send failed: ${res.statusCode} ${data}`));
+      });
+    });
+    req.on('error', reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
 app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   try {
     const { phone, name } = req.body;
@@ -115,32 +165,41 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
       return res.json({ isNewUser: true });
     }
 
-    const isReturningUser = !!user;
-    if (!user) {
-      user = await User.create({ phone: normalizedPhone, name: name.trim(), isVerified: true });
-    } else {
+    // ── Returning user: log in directly (no OTP required) ──────────────
+    if (user) {
       const upd = { isVerified: true };
       if (name && typeof name === 'string' && name.trim()) upd.name = name.trim();
       await User.updateOne({ _id: user._id }, upd);
       user = await User.findById(user._id);
-    }
 
-    let canSpin = true;
-    let nextSpinAt = null;
-    if (user.lastSpin) {
-      const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
-      if (next > new Date()) {
-        if (user.bonusSpins > 0) {
-          canSpin = true;
-        } else {
-          canSpin = false;
-          nextSpinAt = next;
+      let canSpin = true;
+      let nextSpinAt = null;
+      if (user.lastSpin) {
+        const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
+        if (next > new Date()) {
+          if (user.bonusSpins > 0) {
+            canSpin = true;
+          } else {
+            canSpin = false;
+            nextSpinAt = next;
+          }
         }
       }
+
+      const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
+      return res.json({ success: true, token, userId: user._id, name: user.name, isReturningUser: true, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
     }
 
-    const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
-    return res.json({ success: true, autoVerified: true, token, userId: user._id, name: user.name, isReturningUser, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
+    // ── New user: generate OTP, send SMS, require verification ─────────
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await Otp.deleteMany({ phone: normalizedPhone }); // remove any pending OTPs
+    await Otp.create({ phone: normalizedPhone, code, expiresAt });
+
+    await sendSmsOtp(normalizedPhone, code);
+
+    return res.json({ otpSent: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'שגיאת שרת' });
@@ -161,14 +220,36 @@ app.post('/api/auth/verify-otp', otpLimiter, async (req, res) => {
     await Otp.updateOne({ _id: otp._id }, { used: true });
 
     let user = await User.findOne({ phone: normalizedPhone });
+    const isNewUser = !user;
+    const trimmedName = (typeof name === 'string') ? name.trim() : '';
+    if (!user && !trimmedName) {
+      return res.status(400).json({ error: 'חסר שם משתמש' });
+    }
     if (!user) {
-      user = await User.create({ phone: normalizedPhone, name, isVerified: true });
+      user = await User.create({ phone: normalizedPhone, name: trimmedName, isVerified: true });
     } else {
-      await User.updateOne({ _id: user._id }, { isVerified: true, name });
+      const upd = { isVerified: true };
+      if (trimmedName) upd.name = trimmedName;
+      await User.updateOne({ _id: user._id }, upd);
+      user = await User.findById(user._id);
+    }
+
+    let canSpin = true;
+    let nextSpinAt = null;
+    if (user.lastSpin) {
+      const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
+      if (next > new Date()) {
+        if (user.bonusSpins > 0) {
+          canSpin = true;
+        } else {
+          canSpin = false;
+          nextSpinAt = next;
+        }
+      }
     }
 
     const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
-    res.json({ success: true, token, userId: user._id, name: user.name });
+    res.json({ success: true, token, userId: user._id, name: user.name, isNewUser, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'שגיאת שרת' });
