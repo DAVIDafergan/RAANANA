@@ -209,7 +209,7 @@ app.get('/api/user/status', auth, userLimiter, async (req, res) => {
 app.get('/api/benefits', auth, async (req, res) => {
   try {
     const benefits = await Benefit.find({ isActive: true, remainingStock: { $gt: 0 } })
-      .select('businessName logoUrl prizeText color probability');
+      .select('businessName logoUrl prizeText color probability remainingStock');
     const setting = await Settings.findOne({ key: 'globalLossProbability' });
     res.json({ benefits, lossProbability: setting?.value ?? 80 });
   } catch (err) {
