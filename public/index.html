@@ -279,6 +279,12 @@
 
   <!-- SCREEN 4: Wheel -->
   <div class="screen" id="screen-wheel">
+    <!-- Bonus spin notification -->
+    <div id="bonus-spin-banner" style="display:none;text-align:center;background:linear-gradient(135deg,rgba(245,200,66,0.15),rgba(123,92,246,0.15));border:1.5px solid var(--gold);border-radius:var(--radius);padding:14px 20px;margin-bottom:16px;">
+      <div style="font-size:26px;margin-bottom:4px;">🎁</div>
+      <div style="font-family:'Rubik',sans-serif;font-weight:700;font-size:17px;color:var(--gold);">קיבלת סיבוב בונוס מתנה!</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px;" id="bonus-spin-sub">סובב עכשיו – הטיימר ישמר על כנו</div>
+    </div>
     <!-- Prize ticker banner -->
     <div class="prize-ticker-wrap" id="prize-ticker-wrap" style="display:none">
       <div class="prize-ticker" id="prize-ticker"></div>
@@ -382,6 +388,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         } else {
           goTo('screen-wheel', 3);
           loadWheelData();
+          if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
         }
       } catch {
         goTo('screen-wheel', 3);
@@ -454,6 +461,7 @@ async function sendOTP() {
           showLoss(d.nextSpinAt);
         } else {
           goTo('screen-wheel', 3);
+          if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
         }
       } else {
         showGreeting(userName);
@@ -497,6 +505,23 @@ async function verifyOTP() {
 }
 
 function contactSaved() { goTo('screen-wheel', 3); loadWheelData(); }
+
+function showBonusBanner(count) {
+  const banner = document.getElementById('bonus-spin-banner');
+  if (!banner) return;
+  const sub = document.getElementById('bonus-spin-sub');
+  if (sub) {
+    sub.textContent = count > 1
+      ? `יש לך ${count} סיבובי בונוס – סובב עכשיו, הטיימר ישמר`
+      : 'סובב עכשיו – הטיימר ישמר על כנו';
+  }
+  banner.style.display = 'block';
+}
+
+function hideBonusBanner() {
+  const banner = document.getElementById('bonus-spin-banner');
+  if (banner) banner.style.display = 'none';
+}
 
 async function loadWheelData() {
   try {
@@ -616,8 +641,7 @@ async function callSpinAPI() {
     const d = await r.json();
     isSpinning = false;
     document.getElementById('spin-btn').disabled = false;
-
-    if (r.status === 403) {
+    hideBonusBanner();
       goTo('screen-loss', 3);
       document.querySelector('.loss-emoji').textContent = '🔒';
       document.querySelector('.loss-msg').textContent = 'הגלגל סגור כרגע';
