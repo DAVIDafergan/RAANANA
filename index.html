@@ -613,6 +613,50 @@
   }
   @keyframes intro-skip-in { to { opacity: 1; } }
 
+  /* ── After-effects text entrance animations ── */
+  .ae-fade-up {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1);
+  }
+  .ae-fade-up.visible { opacity: 1; transform: translateY(0); }
+
+  .ae-fade-in {
+    opacity: 0;
+    transition: opacity 0.7s ease;
+  }
+  .ae-fade-in.visible { opacity: 1; }
+
+  .ae-slide-right {
+    opacity: 0;
+    transform: translateX(-28px);
+    transition: opacity 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.6s cubic-bezier(0.22,1,0.36,1);
+  }
+  .ae-slide-right.visible { opacity: 1; transform: translateX(0); }
+
+  .ae-scale-in {
+    opacity: 0;
+    transform: scale(0.88);
+    transition: opacity 0.55s cubic-bezier(0.34,1.56,0.64,1), transform 0.55s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .ae-scale-in.visible { opacity: 1; transform: scale(1); }
+
+  /* ── Floating ambient elements ── */
+  .float-ambient {
+    animation: float-ambient ease-in-out infinite alternate;
+  }
+  @keyframes float-ambient {
+    0%   { transform: translateY(0px) rotate(0deg); }
+    100% { transform: translateY(-10px) rotate(3deg); }
+  }
+
+  /* ── Pulse glow on result cards ── */
+  .result-card .win-icon { animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1), icon-float 3s ease-in-out 0.5s infinite alternate; }
+  @keyframes icon-float {
+    0%   { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-8px) scale(1.05); }
+  }
+
   /* ── Respect reduced-motion preference ── */
   @media (prefers-reduced-motion: reduce) {
     body                 { animation: none; background-position: 0% 50%; }
@@ -639,6 +683,11 @@
     .prize-name          { animation: none; background-position: 0% center; }
     #intro-overlay       { display: none; }
     #bg-rays             { animation: none; }
+    .ae-fade-up,
+    .ae-fade-in,
+    .ae-slide-right,
+    .ae-scale-in         { opacity: 1; transform: none; transition: none; }
+    .float-ambient       { animation: none; }
   }
 </style>
   <!-- Firebase SDK (compat – works with plain JS without bundler) -->
@@ -679,9 +728,9 @@
 <div class="bg-orb" style="width:240px;height:240px;background:rgba(123,92,246,0.14);bottom:22%;left:-75px;animation-duration:15s;animation-delay:9s;"></div>
 <div class="container">
   <div class="header">
-    <div class="logo-badge">🎡 רעננה</div>
-    <h1>גלגל המזל</h1>
-    <p>סובב כל יום וזכה בפרסים אמיתיים בעיר</p>
+    <div class="logo-badge ae-fade-in" style="transition-delay:0.1s">🎡 רעננה</div>
+    <h1 class="ae-fade-up" style="transition-delay:0.2s">גלגל המזל</h1>
+    <p class="ae-fade-up" style="transition-delay:0.35s">סובב כל יום וזכה בפרסים אמיתיים בעיר</p>
   </div>
 
   <div class="steps" id="steps-indicator">
@@ -694,8 +743,8 @@
   <!-- SCREEN 1: Register -->
   <div class="screen active" id="screen-register">
     <div class="card">
-      <h2>בואו נתחיל! 👋</h2>
-      <div class="sub">הכנס פרטים כדי להתחיל</div>
+      <h2 class="ae-fade-up" style="transition-delay:0.05s">בואו נתחיל! 👋</h2>
+      <div class="sub ae-fade-up" style="transition-delay:0.12s">הכנס פרטים כדי להתחיל</div>
       <label>שם מלא <span style="font-size:12px;color:var(--muted)">(לחוזרים – לא חובה)</span></label>
       <input type="text" id="reg-name" placeholder="ישראל ישראלי" autocomplete="name">
       <label>מספר טלפון</label>
@@ -722,7 +771,7 @@
   <!-- SCREEN 3: Save Contact -->
   <div class="screen" id="screen-contact">
     <div class="card">
-      <h2>שמור אותנו! 📱</h2>
+      <h2 class="ae-fade-up" style="transition-delay:0.05s">שמור אותנו! 📱</h2>
       <div class="warning-banner">
         <span style="font-family:'Rubik',sans-serif;font-weight:700;color:var(--danger);font-size:15px;">⚠️ חובה לשמור את איש הקשר!</span><br>
         <span class="warning-sub">ללא שמירת איש הקשר <strong>לא תוכל לזכות</strong> בגלגל המזל</span>
@@ -761,11 +810,11 @@
   <div class="screen" id="screen-win">
     <div class="card result-card">
       <div class="win-icon">🎉</div>
-      <img id="win-logo" class="win-logo" src="" alt="לוגו העסק" style="display:none">
-      <p class="win-headline">!זכית</p>
-      <p class="prize-business" id="win-business"></p>
-      <p class="prize-name" id="win-prize"></p>
-      <div class="vip-card">
+      <img id="win-logo" class="win-logo ae-scale-in" src="" alt="לוגו העסק" style="display:none">
+      <p class="win-headline ae-fade-up" style="transition-delay:0.1s">!זכית</p>
+      <p class="prize-business ae-fade-up" id="win-business" style="transition-delay:0.18s"></p>
+      <p class="prize-name ae-fade-up" id="win-prize" style="transition-delay:0.26s"></p>
+      <div class="vip-card ae-scale-in" style="transition-delay:0.35s">
         <div class="vip-label">הצג קוד זה בעסק</div>
         <div class="vip-code" id="win-code"></div>
         <div class="vip-expires">תוקף: <span class="timer" id="win-timer">02:00:00</span></div>
@@ -779,10 +828,10 @@
   <!-- SCREEN 6: Loss -->
   <div class="screen" id="screen-loss">
     <div class="card result-card">
-      <div class="loss-emoji">😅</div>
-      <div class="loss-msg">הפעם לא, חבר!</div>
-      <div class="loss-sub">אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב</div>
-      <div class="next-spin-box">
+      <div class="loss-emoji float-ambient" style="animation-duration:2.8s">😅</div>
+      <div class="loss-msg ae-fade-up" style="transition-delay:0.1s">הפעם לא, חבר!</div>
+      <div class="loss-sub ae-fade-up" style="transition-delay:0.2s">אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב</div>
+      <div class="next-spin-box ae-scale-in" style="transition-delay:0.32s">
         <div class="next-spin-label">הסיבוב הבא עוד</div>
         <div class="next-spin-timer" id="next-spin-timer">24:00:00</div>
       </div>
@@ -1023,6 +1072,7 @@ async function loadWheelData() {
     const r = await fetch(`${API}/api/benefits`, { headers: { Authorization: `Bearer ${token}` } });
     const d = await r.json();
     wheelBenefits = d.benefits || [];
+    lossProbability = d.lossProbability ?? 80;
   } catch {
     wheelBenefits = [
       { businessName: 'טוען...', prizeText: 'פרס', color: '#7B5CF6' },
@@ -1037,8 +1087,24 @@ async function loadWheelData() {
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
 const LOSS_SEGMENT = { prizeText: 'נסה שוב 😅', color: '#2D2D4E' };
+let lossProbability = 80; // updated from API on load
+
 function buildSegments(benefits) {
-  return [...benefits, LOSS_SEGMENT];
+  if (!benefits.length) return [LOSS_SEGMENT];
+
+  // Calculate how many "נסה שוב" segments to show (1–3),
+  // proportional to loss probability but never overwhelming.
+  const winProb = Math.max(5, 100 - lossProbability);
+  const rawCount = (benefits.length * lossProbability) / winProb;
+  const lossCount = Math.max(1, Math.min(3, Math.round(rawCount / 2)));
+
+  // Distribute loss segments randomly among the prize segments
+  const arr = [...benefits];
+  for (let i = 0; i < lossCount; i++) {
+    const pos = Math.floor(Math.random() * (arr.length + 1));
+    arr.splice(pos, 0, { ...LOSS_SEGMENT });
+  }
+  return arr;
 }
 
 function hexToRgb(hex) {
@@ -1288,6 +1354,8 @@ function showWin(data) {
     document.getElementById('win-timer').textContent = fmtMs(diff);
     if (diff <= 0) clearInterval(timerInterval);
   }, 1000);
+  // Reset animation classes so entrance plays again
+  document.querySelectorAll('#screen-win .ae-fade-up, #screen-win .ae-scale-in').forEach(el => el.classList.remove('visible'));
   goTo('screen-win', 3);
   launchConfetti();
 }
@@ -1306,6 +1374,8 @@ function showLoss(nextSpinAt) {
     document.getElementById('next-spin-timer').textContent = fmtMs(diff);
     if (diff <= 0) clearInterval(timerInterval);
   }, 1000);
+  // Reset animation classes so entrance plays again
+  document.querySelectorAll('#screen-loss .ae-fade-up, #screen-loss .ae-scale-in').forEach(el => el.classList.remove('visible'));
   goTo('screen-loss', 3);
 }
 
@@ -1346,6 +1416,41 @@ function launchConfetti() {
     ].join(';');
     document.body.appendChild(el);
   }
+})();
+
+// ── After-effects entrance animations via IntersectionObserver ──────────────
+(function initAeAnimations() {
+  const aeClasses = ['.ae-fade-up', '.ae-fade-in', '.ae-slide-right', '.ae-scale-in'];
+
+  // Trigger elements already in view immediately (with stagger), and watch for
+  // elements that scroll into view later.
+  function reveal(entries, observer) {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }
+
+  const observer = new IntersectionObserver(reveal, { threshold: 0.15 });
+
+  function observeAll() {
+    document.querySelectorAll(aeClasses.join(',')).forEach(el => {
+      observer.observe(el);
+    });
+  }
+
+  // Initial pass
+  observeAll();
+
+  // Re-observe whenever a screen becomes active (goTo swaps screens)
+  const origGoTo = window.goTo;
+  window.goTo = function(screenId, dot) {
+    origGoTo(screenId, dot);
+    // Small delay to let the screen render before observing
+    setTimeout(observeAll, 50);
+  };
 })();
 </script>
 </body>

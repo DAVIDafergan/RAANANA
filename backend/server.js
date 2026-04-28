@@ -53,16 +53,10 @@ app.get('/firebase-env.js', (req, res) => {
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2 MB
 
-const logoStorage = multer.diskStorage({
-  destination: path.join(__dirname, '../public/uploads'),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `logo-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`);
-  },
-});
-
+// Use memory storage so uploaded logos are stored as base64 data URIs in MongoDB
+// This ensures logos survive redeployments (no ephemeral filesystem dependency).
 const logoUpload = multer({
-  storage: logoStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_LOGO_SIZE },
   fileFilter: (req, file, cb) => {
     if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
@@ -417,7 +411,10 @@ app.post('/api/admin/upload-logo', adminAuth, adminLimiter, (req, res, next) => 
   logoUpload.single('logo')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'לא נבחר קובץ' });
-    res.json({ logoUrl: `/uploads/${req.file.filename}` });
+    // Convert to base64 data URI so the logo is stored in MongoDB and survives redeployments
+    const base64 = req.file.buffer.toString('base64');
+    const logoUrl = `data:${req.file.mimetype};base64,${base64}`;
+    res.json({ logoUrl });
   });
 });
 
@@ -555,6 +552,25 @@ app.delete('/api/admin/benefits/:id', adminAuth, async (req, res) => {
   try {
     await Benefit.findByIdAndDelete(req.params.id);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+// Quick stock update – only adjusts remainingStock without touching other fields
+app.patch('/api/admin/benefits/:id/stock', adminAuth, adminLimiter, async (req, res) => {
+  try {
+    const newStock = parseInt(req.body.remainingStock, 10);
+    if (!Number.isInteger(newStock) || newStock < 0) {
+      return res.status(400).json({ error: 'remainingStock חייב להיות מספר שלם חיובי' });
+    }
+    const benefit = await Benefit.findByIdAndUpdate(
+      req.params.id,
+      { remainingStock: newStock },
+      { new: true }
+    );
+    if (!benefit) return res.status(404).json({ error: 'הטבה לא נמצאה' });
+    res.json(benefit);
   } catch (err) {
     res.status(500).json({ error: 'שגיאת שרת' });
   }
