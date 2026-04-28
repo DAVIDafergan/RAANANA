@@ -5,7 +5,7 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
-const { User, Benefit, Spin, Otp, Settings } = require('./models');
+const { User, Business, Benefit, Spin, Otp, Settings } = require('./models');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -276,7 +276,12 @@ app.get('/api/admin/benefits', adminAuth, async (req, res) => {
 
 app.post('/api/admin/benefits', adminAuth, async (req, res) => {
   try {
-    const benefit = await Benefit.create({ ...req.body, remainingStock: req.body.totalStock });
+    const data = { ...req.body, remainingStock: req.body.totalStock };
+    if (data.businessId) {
+      const biz = await Business.findById(data.businessId);
+      if (biz) { data.businessName = biz.name; data.logoUrl = biz.logoUrl; }
+    }
+    const benefit = await Benefit.create(data);
     res.json(benefit);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -285,7 +290,12 @@ app.post('/api/admin/benefits', adminAuth, async (req, res) => {
 
 app.put('/api/admin/benefits/:id', adminAuth, async (req, res) => {
   try {
-    const benefit = await Benefit.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const data = { ...req.body };
+    if (data.businessId) {
+      const biz = await Business.findById(data.businessId);
+      if (biz) { data.businessName = biz.name; data.logoUrl = biz.logoUrl; }
+    }
+    const benefit = await Benefit.findByIdAndUpdate(req.params.id, data, { new: true });
     res.json(benefit);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -317,6 +327,55 @@ app.get('/api/admin/settings', adminAuth, async (req, res) => {
     const map = {};
     settings.forEach(s => { map[s.key] = s.value; });
     res.json(map);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+// ─── BUSINESS ROUTES ─────────────────────────────────
+
+app.get('/api/admin/businesses', adminAuth, async (req, res) => {
+  try {
+    const businesses = await Business.find().sort({ createdAt: -1 });
+    res.json(businesses);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+app.post('/api/admin/businesses', adminAuth, async (req, res) => {
+  try {
+    const { name, logoUrl } = req.body;
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'שם עסק חסר' });
+    }
+    const business = await Business.create({ name: name.trim(), logoUrl: logoUrl || '' });
+    res.json(business);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.put('/api/admin/businesses/:id', adminAuth, async (req, res) => {
+  try {
+    const { name, logoUrl } = req.body;
+    const update = {};
+    if (name !== undefined) update.name = name.trim();
+    if (logoUrl !== undefined) update.logoUrl = logoUrl;
+    const business = await Business.findByIdAndUpdate(req.params.id, update, { new: true });
+    if (!business) return res.status(404).json({ error: 'עסק לא נמצא' });
+    // sync name/logo on linked benefits
+    await Benefit.updateMany({ businessId: business._id }, { businessName: business.name, logoUrl: business.logoUrl });
+    res.json(business);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/businesses/:id', adminAuth, async (req, res) => {
+  try {
+    await Business.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'שגיאת שרת' });
   }
