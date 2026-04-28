@@ -260,8 +260,18 @@
       <input type="text" id="biz-m-name" placeholder="קפה ישראל">
     </div>
     <div class="form-group">
-      <label>URL לוגו (אופציונלי)</label>
-      <input type="text" id="biz-m-logoUrl" placeholder="https://..." oninput="previewBizLogo(this.value)">
+      <label>לוגו (אופציונלי)</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button type="button" id="biz-logo-tab-url" class="btn btn-accent" style="padding:5px 14px;font-size:13px;" onclick="setBizLogoTab('url')">קישור URL</button>
+        <button type="button" id="biz-logo-tab-file" class="btn btn-ghost" style="padding:5px 14px;font-size:13px;" onclick="setBizLogoTab('file')">העלאת קובץ</button>
+      </div>
+      <div id="biz-logo-url-section">
+        <input type="text" id="biz-m-logoUrl" placeholder="https://..." oninput="previewBizLogo(this.value)">
+      </div>
+      <div id="biz-logo-file-section" style="display:none">
+        <input type="file" id="biz-m-logoFile" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" onchange="onBizLogoFileChange(this)">
+        <div id="biz-logo-upload-status" style="font-size:13px;color:var(--muted);margin-top:4px;"></div>
+      </div>
       <div style="margin-top:6px;display:flex;align-items:center;gap:10px;">
         <img id="biz-logo-preview" src="" alt="" style="display:none;width:56px;height:56px;object-fit:contain;border-radius:10px;background:var(--card2);border:1px solid rgba(255,255,255,0.1);">
         <span id="biz-logo-preview-empty" style="display:none;color:var(--muted);font-size:13px;">אין לוגו</span>
@@ -474,13 +484,43 @@ function openBusinessModal(idOrNull) {
   document.getElementById('biz-modal-id').value = b ? b._id : '';
   document.getElementById('biz-m-name').value = b ? b.name : '';
   document.getElementById('biz-m-logoUrl').value = b ? (b.logoUrl || '') : '';
+  document.getElementById('biz-m-logoFile').value = '';
+  document.getElementById('biz-logo-upload-status').textContent = '';
   document.getElementById('biz-modal-error').style.display = 'none';
+  setBizLogoTab('url');
   previewBizLogo(b ? (b.logoUrl || '') : '');
   document.getElementById('business-modal').style.display = 'flex';
 }
 
 function closeBusinessModal() {
   document.getElementById('business-modal').style.display = 'none';
+}
+
+function setBizLogoTab(tab) {
+  const urlSection = document.getElementById('biz-logo-url-section');
+  const fileSection = document.getElementById('biz-logo-file-section');
+  const tabUrl = document.getElementById('biz-logo-tab-url');
+  const tabFile = document.getElementById('biz-logo-tab-file');
+  if (tab === 'url') {
+    urlSection.style.display = '';
+    fileSection.style.display = 'none';
+    tabUrl.className = 'btn btn-accent';
+    tabFile.className = 'btn btn-ghost';
+  } else {
+    urlSection.style.display = 'none';
+    fileSection.style.display = '';
+    tabUrl.className = 'btn btn-ghost';
+    tabFile.className = 'btn btn-accent';
+  }
+}
+
+function onBizLogoFileChange(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => previewBizLogo(e.target.result);
+  reader.readAsDataURL(file);
+  document.getElementById('biz-logo-upload-status').textContent = `נבחר: ${file.name}`;
 }
 
 function previewBizLogo(url) {
@@ -499,12 +539,34 @@ function previewBizLogo(url) {
 async function saveBusiness() {
   const id = document.getElementById('biz-modal-id').value;
   const name = document.getElementById('biz-m-name').value.trim();
-  const logoUrl = document.getElementById('biz-m-logoUrl').value.trim();
   if (!name) {
     document.getElementById('biz-modal-error').textContent = 'נא להזין שם עסק';
     document.getElementById('biz-modal-error').style.display = 'block';
     return;
   }
+
+  // Determine logoUrl: either from file upload or URL input
+  let logoUrl = document.getElementById('biz-m-logoUrl').value.trim();
+  const fileInput = document.getElementById('biz-m-logoFile');
+  const isFileTab = document.getElementById('biz-logo-file-section').style.display !== 'none';
+  if (isFileTab && fileInput.files.length > 0) {
+    const statusEl = document.getElementById('biz-logo-upload-status');
+    statusEl.textContent = 'מעלה...';
+    const formData = new FormData();
+    formData.append('logo', fileInput.files[0]);
+    const uploadRes = await fetch(`${API}/admin/upload-logo`, { method: 'POST', headers: { 'x-admin-key': adminKey }, body: formData });
+    if (!uploadRes.ok) {
+      const e = await uploadRes.json();
+      document.getElementById('biz-modal-error').textContent = e.error || 'שגיאה בהעלאת התמונה';
+      document.getElementById('biz-modal-error').style.display = 'block';
+      statusEl.textContent = '';
+      return;
+    }
+    const uploadData = await uploadRes.json();
+    logoUrl = uploadData.logoUrl;
+    statusEl.textContent = 'הועלה בהצלחה ✓';
+  }
+
   const url = id ? `${API}/admin/businesses/${id}` : `${API}/admin/businesses`;
   const method = id ? 'PUT' : 'POST';
   const r = await fetch(url, { method, headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ name, logoUrl }) });

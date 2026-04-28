@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
+const multer = require('multer');
 const { User, Business, Benefit, Spin, Otp, Settings } = require('./models');
 
 const app = express();
@@ -15,6 +16,30 @@ app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 // Serve static files: frontend at /, admin at /admin, vcf at /raanana-wheel.vcf
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
+
+// ─── FILE UPLOAD CONFIG (LOGO) ───────────────────────
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2 MB
+
+const logoStorage = multer.diskStorage({
+  destination: path.join(__dirname, '../public/uploads'),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `logo-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`);
+  },
+});
+
+const logoUpload = multer({
+  storage: logoStorage,
+  limits: { fileSize: MAX_LOGO_SIZE },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('סוג קובץ לא נתמך. יש להשתמש ב-JPEG, PNG, GIF, WebP או SVG.'));
+    }
+  },
+});
 
 // Rate limiters
 const spinLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
@@ -236,6 +261,14 @@ app.post('/api/redeem/:code', adminAuth, async (req, res) => {
 });
 
 // ─── ADMIN ROUTES ────────────────────────────────────
+
+app.post('/api/admin/upload-logo', adminAuth, adminLimiter, (req, res, next) => {
+  logoUpload.single('logo')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'לא נבחר קובץ' });
+    res.json({ logoUrl: `/uploads/${req.file.filename}` });
+  });
+});
 
 app.get('/api/admin/stats', adminAuth, async (req, res) => {
   try {
