@@ -370,6 +370,7 @@ let regPhone = '', regName = '';
 let isSpinning = false;
 let currentAngle = 0;
 let wheelBenefits = [];
+let lossProbability = 80;
 let timerInterval;
 
 // Redraw the wheel when the window is resized so it stays crisp
@@ -622,18 +623,8 @@ async function loadWheelData() {
     const r = await fetch(`${API}/api/benefits`, { headers: { Authorization: `Bearer ${token}` } });
     const d = await r.json();
     const raw = d.benefits || [];
-    // Expand each benefit by its remainingStock so each copy is a separate wheel segment
-    const totalStock = raw.reduce((s, b) => s + Math.max(1, b.remainingStock || 1), 0);
-    wheelBenefits = [];
-    raw.forEach(b => {
-      let count = Math.max(1, b.remainingStock || 1);
-      if (totalStock > MAX_WHEEL_SEGMENTS) {
-        count = Math.max(1, Math.round(count * MAX_WHEEL_SEGMENTS / totalStock));
-      }
-      for (let i = 0; i < count; i++) {
-        wheelBenefits.push(b);
-      }
-    });
+    lossProbability = d.lossProbability ?? 80;
+    wheelBenefits = raw.length > 0 ? buildWheelSegments(raw, lossProbability) : [];
   } catch {
     wheelBenefits = [];
   }
@@ -641,14 +632,39 @@ async function loadWheelData() {
   updateTicker();
 }
 
+// Build wheel segments proportional to lossProbability and each benefit's probability weight.
+// Loss segments make up lossProbability% of total; win segments fill the rest.
+function buildWheelSegments(benefits, lossProb) {
+  const lossSlots = Math.max(0, Math.round(TARGET_SEGMENTS * lossProb / 100));
+  const winSlots = TARGET_SEGMENTS - lossSlots;
+  const segments = [];
+
+  if (benefits.length > 0 && winSlots > 0) {
+    const totalProb = benefits.reduce((s, b) => s + (b.probability || 1), 0);
+    benefits.forEach(b => {
+      const count = Math.max(1, Math.round(winSlots * (b.probability || 1) / totalProb));
+      for (let i = 0; i < count; i++) segments.push({ ...b, isLoss: false });
+    });
+  }
+
+  for (let i = 0; i < lossSlots; i++) {
+    segments.push({ prizeText: 'נסה שוב 😅', color: '#2D2D4E', isLoss: true });
+  }
+
+  return segments;
+}
+
 function updateTicker() {
   const tickerEl = document.getElementById('prize-ticker');
   const wrapEl = document.getElementById('prize-ticker-wrap');
-  if (!tickerEl || !wrapEl || !wheelBenefits.length) return;
+  if (!tickerEl || !wrapEl) return;
+  // Only show real prizes (no lose segments)
+  const nonLossSegments = wheelBenefits.filter(b => !b.isLoss);
+  if (!nonLossSegments.length) { wrapEl.style.display = 'none'; return; }
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   // Only allow safe CSS color values (hex, rgb, rgba, named colors – no expressions)
   function safeColor(c) { return /^[a-zA-Z0-9#(),%. ]+$/.test(String(c)) ? c : '#7B5CF6'; }
-  const items = wheelBenefits.map(b =>
+  const items = nonLossSegments.map(b =>
     `<span class="ticker-item"><span style="color:${safeColor(b.color || '#7B5CF6')}">●</span> ${esc(b.prizeText)}</span><span class="ticker-sep">✦</span>`
   ).join('');
   tickerEl.innerHTML = items + items; // duplicate for seamless loop
@@ -658,10 +674,10 @@ function updateTicker() {
   const listEl = document.getElementById('prizes-list');
   const itemsEl = document.getElementById('prizes-list-items');
   if (!listEl || !itemsEl) return;
-  // Deduplicate wheelBenefits for the list display
+  // Deduplicate for the list display
   const seenKeys = new Set();
   const uniqueBenefits = [];
-  wheelBenefits.forEach(b => {
+  nonLossSegments.forEach(b => {
     const key = (b.businessName || '') + '|' + (b.prizeText || '');
     if (!seenKeys.has(key)) { seenKeys.add(key); uniqueBenefits.push(b); }
   });
@@ -686,6 +702,7 @@ function updateTicker() {
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
 const MAX_WHEEL_SEGMENTS = 30;
+const TARGET_SEGMENTS = 20;
 
 function getIconForBenefit(b) {
   const text = ((b.businessName || '') + ' ' + (b.prizeText || '')).toLowerCase();
@@ -742,14 +759,14 @@ function drawWheel() {
   // When there are no active benefits yet, show placeholder segments so the
   // wheel looks like a real wheel (not an empty dark circle).
   const activeBenefits = wheelBenefits.length > 0 ? wheelBenefits : [
-    { prizeText: '🎁', color: '#7B5CF6' },
-    { prizeText: '🎁', color: '#E85D04' },
-    { prizeText: '🎁', color: '#00BBF9' },
-    { prizeText: '🎁', color: '#F15BB5' },
-    { prizeText: '🎁', color: '#22C55E' },
-    { prizeText: '🎁', color: '#F59E0B' },
+    { prizeText: '🎁', color: '#7B5CF6', isLoss: false },
+    { prizeText: '🎁', color: '#E85D04', isLoss: false },
+    { prizeText: '🎁', color: '#00BBF9', isLoss: false },
+    { prizeText: '🎁', color: '#F15BB5', isLoss: false },
+    { prizeText: '🎁', color: '#22C55E', isLoss: false },
+    { prizeText: '🎁', color: '#F59E0B', isLoss: false },
   ];
-  const segments = [...activeBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
+  const segments = activeBenefits;
   const n = segments.length;
   const slice = (Math.PI * 2) / n;
   const meta = buildSegmentMeta(activeBenefits);
@@ -765,7 +782,7 @@ function drawWheel() {
 
   segments.forEach((seg, i) => {
     const a0 = currentAngle + i * slice, a1 = a0 + slice;
-    const isLoss = i === segments.length - 1;
+    const isLoss = seg.isLoss === true;
     const segColor = isLoss ? '#2D2D4E' : (meta[i] ? meta[i].color : (seg.color || COLORS[i % COLORS.length]));
 
     // Gradient fill
@@ -940,14 +957,18 @@ async function doSpin() {
   const { r, d } = spinRes;
 
   // Determine which segment to land on
-  const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
+  const segments = wheelBenefits.length > 0 ? wheelBenefits : [{ prizeText: 'נסה שוב 😅', color: '#2D2D4E', isLoss: true }];
   const n = segments.length;
   const slice = (Math.PI * 2) / n;
 
-  let targetIndex = n - 1; // default: "try again" (last segment)
+  // Default: pick a random lose segment
+  const lossIndices = segments.reduce((acc, s, i) => { if (s.isLoss) acc.push(i); return acc; }, []);
+  let targetIndex = lossIndices.length > 0
+    ? lossIndices[Math.floor(Math.random() * lossIndices.length)]
+    : n - 1;
   if (r.ok && d.isWin && d.prize) {
-    const matchingIndices = wheelBenefits.reduce((acc, b, i) => {
-      if (b.businessName === d.prize.businessName && b.prizeText === d.prize.prizeText) acc.push(i);
+    const matchingIndices = segments.reduce((acc, b, i) => {
+      if (!b.isLoss && b.businessName === d.prize.businessName && b.prizeText === d.prize.prizeText) acc.push(i);
       return acc;
     }, []);
     const idx = matchingIndices.length > 0
