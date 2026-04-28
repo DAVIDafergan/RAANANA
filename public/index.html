@@ -658,11 +658,12 @@ function renderWin(businessName, logoUrl, prizeText, verificationCode, expires) 
   document.getElementById('win-prize').textContent = prizeText;
   document.getElementById('win-code').textContent = verificationCode;
   const logoEl = document.getElementById('win-logo');
+  logoEl.onerror = () => { logoEl.style.display = 'none'; };
   if (logoUrl) {
     logoEl.src = logoUrl;
     logoEl.style.display = 'inline-block';
-    logoEl.onerror = () => { logoEl.style.display = 'none'; };
   } else {
+    logoEl.src = '';
     logoEl.style.display = 'none';
   }
   clearInterval(timerInterval);

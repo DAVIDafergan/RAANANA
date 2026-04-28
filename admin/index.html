@@ -461,14 +461,15 @@ async function loadBusinesses() {
       <td>${b.logoUrl ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.name)}" onerror="this.style.display='none'">` : `<span class="biz-logo-placeholder">🏢</span>`}</td>
       <td style="font-weight:600">${esc(b.name)}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-accent" style="padding:5px 10px;font-size:12px" onclick="showPage('benefits','${b._id}')">🎁 הטבות</button>
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick='openBusinessModal(${JSON.stringify(b)})'>✏️</button>
-        <button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="deleteBusiness('${b._id}')">🗑️</button>
+        <button class="btn btn-accent" style="padding:5px 10px;font-size:12px" onclick="showPage('benefits','${esc(b._id)}')">🎁 הטבות</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick="openBusinessModal('${esc(b._id)}')">✏️</button>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="deleteBusiness('${esc(b._id)}')">🗑️</button>
       </td>
     </tr>`).join('');
 }
 
-function openBusinessModal(b) {
+function openBusinessModal(idOrNull) {
+  const b = idOrNull ? allBusinesses.find(x => x._id === idOrNull) : null;
   document.getElementById('biz-modal-title').textContent = b ? 'ערוך עסק' : 'הוסף עסק';
   document.getElementById('biz-modal-id').value = b ? b._id : '';
   document.getElementById('biz-m-name').value = b ? b.name : '';

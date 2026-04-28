@@ -274,10 +274,13 @@ app.get('/api/admin/benefits', adminAuth, async (req, res) => {
   }
 });
 
-app.post('/api/admin/benefits', adminAuth, async (req, res) => {
+app.post('/api/admin/benefits', adminAuth, adminLimiter, async (req, res) => {
   try {
     const data = { ...req.body, remainingStock: req.body.totalStock };
     if (data.businessId) {
+      if (!mongoose.Types.ObjectId.isValid(data.businessId)) {
+        return res.status(400).json({ error: 'businessId לא תקין' });
+      }
       const biz = await Business.findById(data.businessId);
       if (biz) { data.businessName = biz.name; data.logoUrl = biz.logoUrl; }
     }
@@ -288,10 +291,13 @@ app.post('/api/admin/benefits', adminAuth, async (req, res) => {
   }
 });
 
-app.put('/api/admin/benefits/:id', adminAuth, async (req, res) => {
+app.put('/api/admin/benefits/:id', adminAuth, adminLimiter, async (req, res) => {
   try {
     const data = { ...req.body };
     if (data.businessId) {
+      if (!mongoose.Types.ObjectId.isValid(data.businessId)) {
+        return res.status(400).json({ error: 'businessId לא תקין' });
+      }
       const biz = await Business.findById(data.businessId);
       if (biz) { data.businessName = biz.name; data.logoUrl = biz.logoUrl; }
     }
@@ -334,7 +340,7 @@ app.get('/api/admin/settings', adminAuth, async (req, res) => {
 
 // ─── BUSINESS ROUTES ─────────────────────────────────
 
-app.get('/api/admin/businesses', adminAuth, async (req, res) => {
+app.get('/api/admin/businesses', adminAuth, adminLimiter, async (req, res) => {
   try {
     const businesses = await Business.find().sort({ createdAt: -1 });
     res.json(businesses);
@@ -343,7 +349,7 @@ app.get('/api/admin/businesses', adminAuth, async (req, res) => {
   }
 });
 
-app.post('/api/admin/businesses', adminAuth, async (req, res) => {
+app.post('/api/admin/businesses', adminAuth, adminLimiter, async (req, res) => {
   try {
     const { name, logoUrl } = req.body;
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -356,7 +362,7 @@ app.post('/api/admin/businesses', adminAuth, async (req, res) => {
   }
 });
 
-app.put('/api/admin/businesses/:id', adminAuth, async (req, res) => {
+app.put('/api/admin/businesses/:id', adminAuth, adminLimiter, async (req, res) => {
   try {
     const { name, logoUrl } = req.body;
     const update = {};
@@ -372,9 +378,11 @@ app.put('/api/admin/businesses/:id', adminAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/admin/businesses/:id', adminAuth, async (req, res) => {
+app.delete('/api/admin/businesses/:id', adminAuth, adminLimiter, async (req, res) => {
   try {
     await Business.findByIdAndDelete(req.params.id);
+    // unlink benefits so they are not orphaned
+    await Benefit.updateMany({ businessId: req.params.id }, { $unset: { businessId: 1 } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'שגיאת שרת' });
