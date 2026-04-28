@@ -33,6 +33,8 @@ async function seedSettings() {
     { key: 'wheelActive', value: true },
     { key: 'globalLossProbability', value: 80 },
     { key: 'weekendBonus', value: false },
+    { key: 'winnerRatioWinners', value: 20 },
+    { key: 'winnerRatioSpins', value: 100 },
   ];
   for (const d of defaults) {
     await Settings.findOneAndUpdate({ key: d.key }, { $setOnInsert: { value: d.value } }, { upsert: true, new: true });
