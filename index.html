@@ -446,6 +446,9 @@
     .prize-name          { animation: none; background-position: 0% center; }
   }
 </style>
+  <!-- Firebase SDK (compat – works with plain JS without bundler) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div class="bg-orb" style="width:550px;height:550px;background:rgba(123,92,246,0.2);top:-160px;left:-200px;animation-duration:13s;"></div>
@@ -472,11 +475,13 @@
     <div class="card">
       <h2>בואו נתחיל! 👋</h2>
       <div class="sub">הכנס פרטים כדי להתחיל</div>
-      <label>שם מלא</label>
+      <label>שם מלא <span style="font-size:12px;color:var(--muted)">(לחוזרים – לא חובה)</span></label>
       <input type="text" id="reg-name" placeholder="ישראל ישראלי" autocomplete="name">
       <label>מספר טלפון</label>
       <input type="tel" id="reg-phone" placeholder="0501234567" autocomplete="tel" dir="ltr">
       <div id="reg-error" class="error-msg" style="display:none"></div>
+      <!-- Firebase invisible reCAPTCHA anchor -->
+      <div id="recaptcha-container"></div>
       <button class="btn btn-gold" id="reg-btn" onclick="sendOTP()">המשך →</button>
     </div>
   </div>
@@ -572,6 +577,21 @@
 </div>
 
 <script>
+// ─── Firebase config ──────────────────────────────────────────────────────────
+// TODO: Replace the placeholder values below with your actual Firebase project
+// configuration (Firebase Console → Project Settings → Your apps → SDK setup).
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID",
+};
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+let confirmationResult = null;
+
 const API = '';  // ריק = אותו origin (Express מגיש את ה-HTML)
 const WHATSAPP_NUMBER = '972556674329'; // מספר לקבלת הודעות זכייה
 let token = localStorage.getItem('whl_token');
@@ -603,31 +623,57 @@ function showError(id, msg) {
   setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
+// Convert Israeli phone formats to E.164 (+972...)
+function normalizePhoneForFirebase(phone) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('972') && digits.length === 12) return '+' + digits;
+  if (digits.startsWith('0') && digits.length >= 9) return '+972' + digits.slice(1);
+  return '+972' + digits;
+}
+
+// Setup Firebase invisible reCAPTCHA (re-initialise on each call to support retries)
+function setupRecaptcha() {
+  if (window.recaptchaVerifier) {
+    try { window.recaptchaVerifier.clear(); } catch (_) {}
+    window.recaptchaVerifier = null;
+  }
+  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+    size: 'invisible',
+    callback: () => {},
+  });
+}
+
+// Map Firebase error codes to Hebrew messages
+function getFirebaseError(err) {
+  const code = (err && err.code) || '';
+  if (code.includes('invalid-phone-number')) return 'מספר טלפון לא תקין';
+  if (code.includes('too-many-requests'))    return 'יותר מדי ניסיונות, נסה שנית מאוחר יותר';
+  if (code.includes('quota-exceeded'))       return 'חריגה ממכסת SMS';
+  if (code.includes('invalid-verification-code')) return 'קוד שגוי';
+  if (code.includes('code-expired'))         return 'קוד פג תוקף, שלח שנית';
+  if (code.includes('captcha-check-failed')) return 'בדיקת אבטחה נכשלה, נסה שנית';
+  return 'שגיאה, נסה שנית';
+}
+
 async function sendOTP() {
-  regName = document.getElementById('reg-name').value.trim();
+  regName  = document.getElementById('reg-name').value.trim();
   regPhone = document.getElementById('reg-phone').value.trim();
-  if (!regName) return showError('reg-error', 'נא להזין שם מלא');
-  if (!regPhone || regPhone.length < 9) return showError('reg-error', 'נא להזין מספר טלפון תקין');
+  if (!regPhone || regPhone.replace(/\D/g,'').length < 9) {
+    return showError('reg-error', 'נא להזין מספר טלפון תקין');
+  }
 
   const btn = document.getElementById('reg-btn');
-  btn.disabled = true; btn.textContent = 'טוען...';
+  btn.disabled = true; btn.textContent = 'שולח SMS...';
 
   try {
-    const r = await fetch(`${API}/api/auth/send-otp`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: regPhone, name: regName })
-    });
-    const d = await r.json();
-    if (r.ok) {
-      token = d.token; userName = d.name;
-      localStorage.setItem('whl_token', token);
-      localStorage.setItem('whl_name', userName);
-      goTo('screen-contact', 2);
-    } else {
-      showError('reg-error', d.error || 'שגיאה בשליחה');
-    }
-  } catch {
-    showError('reg-error', 'בעיית חיבור, נסה שנית');
+    setupRecaptcha();
+    const phoneE164 = normalizePhoneForFirebase(regPhone);
+    confirmationResult = await fbAuth.signInWithPhoneNumber(phoneE164, window.recaptchaVerifier);
+    document.getElementById('otp-sub').textContent = `שלחנו SMS ל-${regPhone}`;
+    goTo('screen-otp', 1);
+  } catch (err) {
+    console.error('sendOTP error:', err);
+    showError('reg-error', getFirebaseError(err));
   }
   btn.disabled = false; btn.textContent = 'המשך →';
 }
@@ -635,26 +681,71 @@ async function sendOTP() {
 async function verifyOTP() {
   const code = document.getElementById('otp-code').value.trim();
   if (code.length !== 6) return showError('otp-error', 'קוד חייב להיות 6 ספרות');
+  if (!confirmationResult) return showError('otp-error', 'נא לשלוח קוד מחדש');
 
   const btn = document.getElementById('otp-btn');
   btn.disabled = true; btn.textContent = 'מאמת...';
 
   try {
-    const r = await fetch(`${API}/api/auth/verify-otp`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: regPhone, name: regName, code })
+    const result = await confirmationResult.confirm(code);
+    const idToken = await result.user.getIdToken();
+
+    const r = await fetch(`${API}/api/auth/firebase-verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken, name: regName }),
     });
     const d = await r.json();
+
     if (r.ok) {
+      if (d.needsName) {
+        // New user – ask for their name and re-verify with the same Firebase token
+        goTo('screen-register', 0);
+        showError('reg-error', 'משתמש חדש – נא להזין שם מלא');
+        btn.disabled = false; btn.textContent = 'אמת קוד ✓';
+
+        // Re-submit automatically once the user fills in their name
+        document.getElementById('reg-btn').onclick = async () => {
+          regName = document.getElementById('reg-name').value.trim();
+          if (!regName) return showError('reg-error', 'נא להזין שם מלא');
+          const r2 = await fetch(`${API}/api/auth/firebase-verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken, name: regName }),
+          });
+          const d2 = await r2.json();
+          if (r2.ok && d2.token) {
+            token = d2.token; userName = d2.name;
+            localStorage.setItem('whl_token', token);
+            localStorage.setItem('whl_name', userName);
+            // Restore normal send-OTP handler for next time
+            document.getElementById('reg-btn').onclick = sendOTP;
+            goTo('screen-contact', 2);
+          } else {
+            showError('reg-error', d2.error || 'שגיאה, נסה שנית');
+          }
+        };
+        return;
+      }
+
       token = d.token; userName = d.name;
       localStorage.setItem('whl_token', token);
       localStorage.setItem('whl_name', userName);
-      goTo('screen-contact', 2);
+      // Restore normal handler (in case it was swapped above)
+      document.getElementById('reg-btn').onclick = sendOTP;
+
+      if (d.isNewUser) {
+        goTo('screen-contact', 2);
+      } else {
+        goTo('screen-wheel', 3);
+        loadWheelData();
+      }
     } else {
       showError('otp-error', d.error || 'קוד שגוי');
     }
-  } catch {
-    showError('otp-error', 'בעיית חיבור, נסה שנית');
+  } catch (err) {
+    console.error('verifyOTP error:', err);
+    showError('otp-error', getFirebaseError(err));
   }
   btn.disabled = false; btn.textContent = 'אמת קוד ✓';
 }
