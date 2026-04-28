@@ -43,11 +43,13 @@ mongoose.connection.once('open', seedSettings);
 // ─── AUTH ───────────────────────────────────────────
 
 const ADMIN_PHONE = process.env.ADMIN_PHONE || '0556674329';
+const MAX_BONUS_SPINS = 10;
 
 function normalizePhone(phone) {
   let normalized = phone.replace(/\D/g, '');
   // Treat Israeli country code (972) as local prefix (0)
-  if (normalized.startsWith('972') && normalized.length >= 12) {
+  // Israeli numbers with country code are exactly 12 digits (972 + 9 digits)
+  if (normalized.startsWith('972') && normalized.length === 12) {
     normalized = '0' + normalized.slice(3);
   }
   return normalized;
@@ -93,10 +95,13 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/auth/verify-otp', async (req, res) => {
+app.post('/api/auth/verify-otp', otpLimiter, async (req, res) => {
   try {
     const { phone, name, code } = req.body;
-    const normalizedPhone = normalizePhone(phone || '');
+    if (!phone || !code || typeof phone !== 'string' || typeof code !== 'string') {
+      return res.status(400).json({ error: 'חסרים פרטים' });
+    }
+    const normalizedPhone = normalizePhone(phone);
     const otp = await Otp.findOne({ phone: normalizedPhone, code, used: false });
     if (!otp || otp.expiresAt < new Date()) {
       return res.status(401).json({ error: 'קוד שגוי או פג תוקף' });
@@ -288,7 +293,7 @@ app.get('/api/admin/wins', adminAuth, adminLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/admin/users', adminAuth, async (req, res) => {
+app.get('/api/admin/users', adminAuth, adminLimiter, async (req, res) => {
   try {
     const users = await User.find().select('name phone spinCount lastSpin bonusSpins createdAt').sort({ createdAt: -1 });
     res.json(users);
@@ -300,8 +305,8 @@ app.get('/api/admin/users', adminAuth, async (req, res) => {
 app.post('/api/admin/grant-bonus-spins', adminAuth, adminLimiter, async (req, res) => {
   try {
     const count = parseInt(req.body.count, 10);
-    if (!Number.isInteger(count) || count < 1 || count > 10) {
-      return res.status(400).json({ error: 'count חייב להיות מספר שלם בין 1 ל-10' });
+    if (!Number.isInteger(count) || count < 1 || count > MAX_BONUS_SPINS) {
+      return res.status(400).json({ error: `count חייב להיות מספר שלם בין 1 ל-${MAX_BONUS_SPINS}` });
     }
     await User.updateMany({}, { $set: { bonusSpins: count } });
     res.json({ success: true });
