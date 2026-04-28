@@ -365,6 +365,15 @@ let adminKey = '';
 const API = '/api';
 let allBusinesses = [];
 
+// Safe logo error handler – replaces failed img with a placeholder span
+function handleLogoError(img) {
+  img.style.display = 'none';
+  const span = document.createElement('span');
+  span.className = 'biz-logo-placeholder';
+  span.textContent = '🏢';
+  if (img.parentNode) img.parentNode.insertBefore(span, img.nextSibling);
+}
+
 function doLogin() {
   const k = document.getElementById('admin-key-input').value.trim();
   if (!k) return;
@@ -491,7 +500,7 @@ async function loadBusinesses() {
   tbody.innerHTML = allBusinesses.map(b => `
     <tr>
       <td>${b.logoUrl
-        ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.name)}" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span class=\\'biz-logo-placeholder\\'>🏢</span>')">`
+        ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.name)}" onerror="handleLogoError(this)">`
         : `<span class="biz-logo-placeholder">🏢</span>`}</td>
       <td style="font-weight:600">${esc(b.name)}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -620,7 +629,7 @@ async function loadBenefits() {
   tbody.innerHTML = data.map(b => {
     const stockClass = b.remainingStock === 0 ? 'empty' : b.remainingStock <= 5 ? 'low' : '';
     const logoHtml = b.logoUrl
-      ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.businessName)}" style="width:28px;height:28px;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\\'font-size:18px;\\'>🏢</span>')">`
+      ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.businessName)}" style="width:28px;height:28px;" onerror="handleLogoError(this)">`
       : '<span style="font-size:18px;">🏢</span>';
     return `
     <tr data-benefit-id="${esc(b._id)}">
