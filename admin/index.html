@@ -189,7 +189,7 @@
       <div class="page-title">🏆 זכיות</div>
       <div class="card">
         <table>
-          <thead><tr><th>שם</th><th>טלפון</th><th>פרס</th><th>עסק</th><th>תאריך זכייה</th><th>מומש?</th></tr></thead>
+          <thead><tr><th>שם</th><th>טלפון</th><th>פרס</th><th>עסק</th><th>תאריך זכייה</th><th>קוד מימוש</th><th>מומש?</th></tr></thead>
           <tbody id="wins-tbody"><tr><td colspan="6" class="empty">טוען...</td></tr></tbody>
         </table>
       </div>
@@ -692,7 +692,7 @@ async function loadWins() {
   const r = await fetch(`${API}/admin/wins`, { headers: { 'x-admin-key': adminKey } });
   const data = r.ok ? await r.json() : [];
   const tbody = document.getElementById('wins-tbody');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">אין זכיות עדיין</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">אין זכיות עדיין</td></tr>'; return; }
   tbody.innerHTML = data.map(w => `
     <tr>
       <td>${w.userId?.name || '—'}</td>
@@ -700,6 +700,7 @@ async function loadWins() {
       <td>${w.benefitId?.prizeText || '—'}</td>
       <td>${w.benefitId?.businessName || '—'}</td>
       <td>${new Date(w.spinAt).toLocaleString('he-IL')}</td>
+      <td style="font-family:monospace;letter-spacing:2px;font-weight:700;color:var(--gold)">${w.verificationCode || '—'}</td>
       <td><span class="badge ${w.isRedeemed ? 'badge-green' : 'badge-red'}">${w.isRedeemed ? 'מומש' : 'לא מומש'}</span></td>
     </tr>`).join('');
 }

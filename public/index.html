@@ -191,7 +191,7 @@
   }
   .prize-ticker-wrap::before { left: 0; background: linear-gradient(to right, var(--card), transparent); }
   .prize-ticker-wrap::after  { right: 0; background: linear-gradient(to left,  var(--card), transparent); }
-  .prize-ticker { display: flex; white-space: nowrap; animation: tickerScroll 20s linear infinite; }
+  .prize-ticker { display: flex; white-space: nowrap; animation: tickerScroll 8s linear infinite; }
   @keyframes tickerScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
   .ticker-item {
     display: inline-flex; align-items: center; gap: 6px;
@@ -526,62 +526,101 @@ function updateTicker() {
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
+const SEGMENT_ICONS = ['☕','🍕','🛍️','💈','🍦','🎭','🎵','💆','🍔','🌿','🎂','💎'];
+
 function drawWheel() {
   const canvas = document.getElementById('wheel-canvas');
   const ctx = canvas.getContext('2d');
-  const cx = 160, cy = 160, r = 150;
+  const dpr = window.devicePixelRatio || 1;
+  const cssSize = 320;
+  canvas.width = cssSize * dpr;
+  canvas.height = cssSize * dpr;
+  canvas.style.width = cssSize + 'px';
+  canvas.style.height = cssSize + 'px';
+  ctx.scale(dpr, dpr);
+
+  const cx = cssSize / 2, cy = cssSize / 2, r = 148;
   const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
   const n = segments.length;
   const slice = (Math.PI * 2) / n;
 
-  ctx.clearRect(0, 0, 320, 320);
+  ctx.clearRect(0, 0, cssSize, cssSize);
+
   segments.forEach((seg, i) => {
     const a0 = currentAngle + i * slice, a1 = a0 + slice;
+
+    // Segment fill
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, a0, a1);
     ctx.closePath();
     ctx.fillStyle = seg.color || COLORS[i % COLORS.length];
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
+    // Text in segment
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(a0 + slice / 2);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur = 3;
 
-    const maxLen = n > 8 ? 9 : 13;
-    if (seg.businessName) {
-      const biz = seg.businessName.length > maxLen ? seg.businessName.slice(0, maxLen - 1) + '…' : seg.businessName;
-      const prize = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen - 1) + '…' : seg.prizeText;
-      ctx.font = `bold ${n > 8 ? 9 : 11}px Assistant, sans-serif`;
-      ctx.fillText(biz, r - 10, -4);
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.font = `${n > 8 ? 8 : 10}px Assistant, sans-serif`;
-      ctx.fillText(prize, r - 10, 8);
-    } else {
-      ctx.font = `bold ${n > 8 ? 10 : 12}px Assistant, sans-serif`;
-      const label = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen - 1) + '…' : seg.prizeText;
-      ctx.fillText(label, r - 10, 4);
+    const maxLen = n > 8 ? 7 : 10;
+    const isLoss = seg.color === '#2D2D4E';
+    const icon = isLoss ? '' : SEGMENT_ICONS[i % SEGMENT_ICONS.length];
+
+    if (icon) {
+      ctx.shadowBlur = 0;
+      ctx.font = `${n > 8 ? 11 : 14}px sans-serif`;
+      ctx.fillText(icon, r - 4, 5);
+      ctx.shadowBlur = 3;
     }
+
+    const textX = icon ? r - (n > 8 ? 20 : 24) : r - 8;
+
+    if (seg.businessName) {
+      const biz = seg.businessName.length > maxLen ? seg.businessName.slice(0, maxLen) + '…' : seg.businessName;
+      const prize = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen) + '…' : seg.prizeText;
+      ctx.font = `bold ${n > 8 ? 10 : 12}px 'Assistant', sans-serif`;
+      ctx.fillStyle = '#fff';
+      ctx.fillText(biz, textX, -5);
+      ctx.font = `${n > 8 ? 9 : 11}px 'Assistant', sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fillText(prize, textX, 7);
+    } else {
+      ctx.font = `bold ${n > 8 ? 10 : 12}px 'Assistant', sans-serif`;
+      ctx.fillStyle = '#fff';
+      const label = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen) + '…' : seg.prizeText;
+      ctx.fillText(label, textX, 4);
+    }
+
     ctx.restore();
   });
 
-  // Center
+  // Decorative outer ring
   ctx.beginPath();
-  ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(245,200,66,0.45)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 26, 0, Math.PI * 2);
   ctx.fillStyle = '#0D0D1A';
   ctx.fill();
   ctx.strokeStyle = '#F5C842';
   ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.font = 'bold 16px sans-serif';
+  ctx.font = 'bold 18px sans-serif';
   ctx.fillStyle = '#F5C842';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0)';
   ctx.fillText('🎡', cx, cy);
 }
 
