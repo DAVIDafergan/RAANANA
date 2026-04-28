@@ -56,14 +56,26 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     }
 
     let user = await User.findOne({ phone });
+    const isReturningUser = !!user;
     if (!user) {
       user = await User.create({ phone, name, isVerified: true });
     } else {
       await User.updateOne({ _id: user._id }, { isVerified: true, name });
       user = await User.findById(user._id);
     }
+
+    let canSpin = true;
+    let nextSpinAt = null;
+    if (user.lastSpin) {
+      const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
+      if (next > new Date()) {
+        canSpin = false;
+        nextSpinAt = next;
+      }
+    }
+
     const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
-    return res.json({ success: true, autoVerified: true, token, userId: user._id, name: user.name });
+    return res.json({ success: true, autoVerified: true, token, userId: user._id, name: user.name, isReturningUser, canSpin, nextSpinAt });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'שגיאת שרת' });
