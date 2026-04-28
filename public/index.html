@@ -227,17 +227,31 @@
     <div class="step-dot" id="dot-3"></div>
   </div>
 
-  <!-- SCREEN 1: Register -->
-  <div class="screen active" id="screen-register">
+  <!-- SCREEN 0: Login (returning users – phone only) -->
+  <div class="screen active" id="screen-login">
     <div class="card">
-      <h2>בואו נתחיל! 👋</h2>
-      <div class="sub">הכנס פרטים כדי להתחיל</div>
+      <h2>ברוכים הבאים! 👋</h2>
+      <div class="sub">הזן מספר טלפון כדי להיכנס לגלגל</div>
+      <label>מספר טלפון</label>
+      <input type="tel" id="login-phone" placeholder="0501234567" autocomplete="tel" dir="ltr">
+      <div id="login-error" class="error-msg" style="display:none"></div>
+      <button class="btn btn-gold" id="login-btn" onclick="loginWithPhone()">כניסה →</button>
+      <button class="btn btn-ghost" style="margin-top:10px;" onclick="goToRegister()">🆕 משחק בפעם הראשונה? הירשם כאן</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: Register (new users) -->
+  <div class="screen" id="screen-register">
+    <div class="card">
+      <h2>הרשמה ראשונה! 🎉</h2>
+      <div class="sub">מלא שם ומספר טלפון כדי להתחיל לשחק</div>
       <label>שם מלא</label>
       <input type="text" id="reg-name" placeholder="ישראל ישראלי" autocomplete="name">
       <label>מספר טלפון</label>
       <input type="tel" id="reg-phone" placeholder="0501234567" autocomplete="tel" dir="ltr">
       <div id="reg-error" class="error-msg" style="display:none"></div>
-      <button class="btn btn-gold" id="reg-btn" onclick="sendOTP()">המשך →</button>
+      <button class="btn btn-gold" id="reg-btn" onclick="sendOTP()">הרשמה →</button>
+      <button class="btn btn-ghost" onclick="goTo('screen-login', 0)">⟵ חזרה</button>
     </div>
   </div>
 
@@ -279,6 +293,8 @@
 
   <!-- SCREEN 4: Wheel -->
   <div class="screen" id="screen-wheel">
+    <!-- Personalized greeting -->
+    <div id="wheel-greeting" style="display:none;text-align:center;font-family:'Rubik',sans-serif;font-size:17px;font-weight:700;color:var(--gold);margin-bottom:12px;padding:0 4px;line-height:1.5;"></div>
     <!-- Bonus spin notification -->
     <div id="bonus-spin-banner" style="display:none;text-align:center;background:linear-gradient(135deg,rgba(245,200,66,0.15),rgba(123,92,246,0.15));border:1.5px solid var(--gold);border-radius:var(--radius);padding:14px 20px;margin-bottom:16px;">
       <div style="font-size:26px;margin-bottom:4px;">🎁</div>
@@ -306,6 +322,7 @@
   <div class="screen" id="screen-win">
     <div class="card result-card">
       <div class="win-icon">🎉</div>
+      <div id="win-personal" style="font-family:'Rubik',sans-serif;font-weight:700;font-size:17px;color:var(--gold);margin-bottom:8px;"></div>
       <img id="win-logo" class="prize-logo" src="" alt="">
       <p class="prize-business" id="win-business"></p>
       <p class="prize-name" id="win-prize"></p>
@@ -362,6 +379,71 @@ function showGreeting(name) {
   if (el) { el.textContent = getGreeting(name); el.style.display = 'block'; }
 }
 
+function showWheelGreeting(name, isReturning) {
+  const el = document.getElementById('wheel-greeting');
+  if (!el || !name) return;
+  const h = new Date().getHours();
+  let timeGreet;
+  if (h >= 5 && h < 12) timeGreet = 'בוקר טוב';
+  else if (h >= 12 && h < 18) timeGreet = 'צהריים טובים';
+  else timeGreet = 'ערב טוב';
+  const msgs = isReturning
+    ? [
+        `${timeGreet}, ${name}! 👋 תודה שחזרת אלינו`,
+        `${timeGreet}, ${name}! 🌟 כיף שאתה כאן שוב`,
+        `${timeGreet}, ${name}! 🎡 בוא נראה מה הגורל מביא היום`,
+      ]
+    : [`${timeGreet}, ${name}! 🎉 ברוך הבא לגלגל המזל`];
+  el.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+  el.style.display = 'block';
+}
+
+function goToRegister() {
+  document.getElementById('reg-name').value = '';
+  const loginPhone = document.getElementById('login-phone').value.trim();
+  document.getElementById('reg-phone').value = loginPhone;
+  goTo('screen-register', 0);
+}
+
+async function loginWithPhone() {
+  const phone = document.getElementById('login-phone').value.trim();
+  if (!phone || phone.length < 9) return showError('login-error', 'נא להזין מספר טלפון תקין');
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'מתחבר...';
+
+  try {
+    const r = await fetch(`${API}/api/auth/send-otp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const d = await r.json();
+    if (r.ok && d.isNewUser) {
+      document.getElementById('reg-phone').value = phone;
+      document.getElementById('reg-name').value = '';
+      goTo('screen-register', 0);
+    } else if (r.ok) {
+      token = d.token; userName = d.name;
+      localStorage.setItem('whl_token', token);
+      localStorage.setItem('whl_name', userName);
+      loadWheelData();
+      if (!d.canSpin) {
+        showWheelGreeting(userName, true);
+        showLoss(d.nextSpinAt);
+      } else {
+        showWheelGreeting(userName, true);
+        goTo('screen-wheel', 3);
+        if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
+      }
+    } else {
+      showError('login-error', d.error || 'שגיאת כניסה');
+    }
+  } catch {
+    showError('login-error', 'בעיית חיבור, נסה שנית');
+  }
+  btn.disabled = false; btn.textContent = 'כניסה →';
+}
+
 function logout() {
   localStorage.removeItem('whl_token');
   localStorage.removeItem('whl_name');
@@ -369,7 +451,7 @@ function logout() {
   token = null;
   userName = null;
   clearInterval(timerInterval);
-  goTo('screen-register', 0);
+  goTo('screen-login', 0);
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -384,8 +466,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('whl_name', userName);
         if (!d.canSpin) {
           loadWheelData();
+          showWheelGreeting(userName, true);
           showLoss(d.nextSpinAt);
         } else {
+          showWheelGreeting(userName, true);
           goTo('screen-wheel', 3);
           loadWheelData();
           if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
@@ -458,8 +542,10 @@ async function sendOTP() {
       if (d.isReturningUser) {
         loadWheelData();
         if (!d.canSpin) {
+          showWheelGreeting(userName, true);
           showLoss(d.nextSpinAt);
         } else {
+          showWheelGreeting(userName, true);
           goTo('screen-wheel', 3);
           if (d.bonusSpins > 0) showBonusBanner(d.bonusSpins);
         }
@@ -504,7 +590,7 @@ async function verifyOTP() {
   btn.disabled = false; btn.textContent = 'אמת קוד ✓';
 }
 
-function contactSaved() { goTo('screen-wheel', 3); loadWheelData(); }
+function contactSaved() { showWheelGreeting(userName, false); goTo('screen-wheel', 3); loadWheelData(); }
 
 function showBonusBanner(count) {
   const banner = document.getElementById('bonus-spin-banner');
@@ -681,31 +767,32 @@ async function callSpinAPI() {
     isSpinning = false;
     document.getElementById('spin-btn').disabled = false;
     hideBonusBanner();
+    if (r.status === 403) {
       goTo('screen-loss', 3);
       document.querySelector('.loss-emoji').textContent = '🔒';
       document.querySelector('.loss-msg').textContent = 'הגלגל סגור כרגע';
       document.querySelector('.loss-sub').textContent = d.error || 'הגלגל כבוי, חזרו מאוחר יותר';
       document.querySelector('.next-spin-box').style.display = 'none';
     } else if (r.status === 429) {
-      document.querySelector('.next-spin-box').style.display = '';
-      document.querySelector('.loss-emoji').textContent = '😅';
-      document.querySelector('.loss-msg').textContent = 'הפעם לא, חבר!';
-      document.querySelector('.loss-sub').innerHTML = 'אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב';
-      showLoss(d.nextSpinAt);
+      setLossMessage(d.nextSpinAt);
     } else if (r.ok && d.isWin) {
       showWin(d);
     } else {
-      document.querySelector('.next-spin-box').style.display = '';
-      document.querySelector('.loss-emoji').textContent = '😅';
-      document.querySelector('.loss-msg').textContent = 'הפעם לא, חבר!';
-      document.querySelector('.loss-sub').innerHTML = 'אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב';
-      showLoss(d.nextSpinAt);
+      setLossMessage(d.nextSpinAt);
     }
   } catch {
     isSpinning = false;
     document.getElementById('spin-btn').disabled = false;
     alert('בעיית חיבור, נסה שנית');
   }
+}
+
+function setLossMessage(nextSpinAt) {
+  document.querySelector('.next-spin-box').style.display = '';
+  document.querySelector('.loss-emoji').textContent = '😅';
+  document.querySelector('.loss-msg').textContent = `הפעם לא, ${userName || 'חבר'}!`;
+  document.querySelector('.loss-sub').innerHTML = 'אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב';
+  showLoss(nextSpinAt);
 }
 
 function showWin(data) {
@@ -729,6 +816,8 @@ function renderWin(businessName, logoUrl, prizeText, verificationCode, expires) 
   document.getElementById('win-business').textContent = businessName;
   document.getElementById('win-prize').textContent = prizeText;
   document.getElementById('win-code').textContent = verificationCode;
+  const personalEl = document.getElementById('win-personal');
+  if (personalEl) personalEl.textContent = userName ? `כל הכבוד, ${userName}! 🎊` : '';
   const logoEl = document.getElementById('win-logo');
   logoEl.onerror = () => { logoEl.style.display = 'none'; };
   if (logoUrl) {
