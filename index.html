@@ -447,6 +447,7 @@
   }
 </style>
   <!-- Firebase SDK (compat – works with plain JS without bundler) -->
+  <script src="/firebase-env.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 </head>
@@ -578,16 +579,8 @@
 
 <script>
 // ─── Firebase config ──────────────────────────────────────────────────────────
-// TODO: Replace the placeholder values below with your actual Firebase project
-// configuration (Firebase Console → Project Settings → Your apps → SDK setup).
-const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID",
-};
+// Values are injected server-side from environment variables via /firebase-env.js
+const firebaseConfig = window.FIREBASE_CONFIG;
 firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
 let confirmationResult = null;
