@@ -631,16 +631,14 @@ function normalizePhoneForFirebase(phone) {
   return '+972' + digits;
 }
 
-// Setup Firebase invisible reCAPTCHA (re-initialise on each call to support retries)
+// Setup Firebase invisible reCAPTCHA – create only once to avoid double-render errors
 function setupRecaptcha() {
-  if (window.recaptchaVerifier) {
-    try { window.recaptchaVerifier.clear(); } catch (_) {}
-    window.recaptchaVerifier = null;
+  if (!window.recaptchaVerifier) {
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      size: 'invisible',
+      callback: () => {},
+    });
   }
-  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-    size: 'invisible',
-    callback: () => {},
-  });
 }
 
 // Map Firebase error codes to Hebrew messages
@@ -672,8 +670,18 @@ async function sendOTP() {
     document.getElementById('otp-sub').textContent = `שלחנו SMS ל-${regPhone}`;
     goTo('screen-otp', 1);
   } catch (err) {
-    console.error('sendOTP error:', err);
+    console.error('sendOTP error – code:', err.code, '| message:', err.message, '| full:', err);
     showError('reg-error', getFirebaseError(err));
+    // Reset the reCAPTCHA widget so the user can retry without refreshing the page
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.render().then(widgetId => {
+        window.grecaptcha.reset(widgetId);
+      }).catch(() => {
+        // If the widget was never rendered, clear the verifier so it re-initialises on next attempt
+        try { window.recaptchaVerifier.clear(); } catch (_) {}
+        window.recaptchaVerifier = null;
+      });
+    }
   }
   btn.disabled = false; btn.textContent = 'המשך →';
 }
