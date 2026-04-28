@@ -130,6 +130,11 @@
   @keyframes pop { 0% { transform: scale(0) rotate(-15deg); } 100% { transform: scale(1) rotate(0); } }
   .prize-business { font-size: 14px; color: var(--muted); margin-bottom: 4px; }
   .prize-name { font-family: 'Rubik', sans-serif; font-size: 26px; font-weight: 900; color: var(--gold); margin-bottom: 20px; }
+  .prize-logo {
+    width: 80px; height: 80px; object-fit: contain; border-radius: 16px;
+    background: var(--card2); border: 2px solid rgba(255,255,255,0.1);
+    margin-bottom: 12px; display: none;
+  }
   .vip-card {
     background: linear-gradient(135deg, #1A1200, #2A1E00);
     border: 2px solid var(--gold); border-radius: 14px;
@@ -295,6 +300,7 @@
   <div class="screen" id="screen-win">
     <div class="card result-card">
       <div class="win-icon">🎉</div>
+      <img id="win-logo" class="prize-logo" src="" alt="">
       <p class="prize-business" id="win-business"></p>
       <p class="prize-name" id="win-prize"></p>
       <div class="vip-card">
@@ -643,22 +649,32 @@ function showWin(data) {
   localStorage.setItem('whl_spin_result', JSON.stringify({
     type: 'win',
     businessName: data.prize.businessName,
+    logoUrl: data.prize.logoUrl || '',
     prizeText: data.prize.prizeText,
     verificationCode: data.verificationCode,
     expiresAt: new Date(data.expiresAt).getTime(),
   }));
-  renderWin(data.prize.businessName, data.prize.prizeText, data.verificationCode, new Date(data.expiresAt));
+  renderWin(data.prize.businessName, data.prize.logoUrl || '', data.prize.prizeText, data.verificationCode, new Date(data.expiresAt));
   launchConfetti();
 }
 
 function restoreWin(state) {
-  renderWin(state.businessName, state.prizeText, state.verificationCode, new Date(state.expiresAt));
+  renderWin(state.businessName, state.logoUrl || '', state.prizeText, state.verificationCode, new Date(state.expiresAt));
 }
 
-function renderWin(businessName, prizeText, verificationCode, expires) {
+function renderWin(businessName, logoUrl, prizeText, verificationCode, expires) {
   document.getElementById('win-business').textContent = businessName;
   document.getElementById('win-prize').textContent = prizeText;
   document.getElementById('win-code').textContent = verificationCode;
+  const logoEl = document.getElementById('win-logo');
+  logoEl.onerror = () => { logoEl.style.display = 'none'; };
+  if (logoUrl) {
+    logoEl.src = logoUrl;
+    logoEl.style.display = 'inline-block';
+  } else {
+    logoEl.src = '';
+    logoEl.style.display = 'none';
+  }
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     const diff = Math.max(0, expires - new Date());

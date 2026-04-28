@@ -93,6 +93,8 @@
   .setting-info p { font-size: 13px; color: var(--muted); }
   .empty { color: var(--muted); text-align: center; padding: 28px; font-size: 14px; }
   .logout-btn { position: absolute; bottom: 20px; right: 0; left: 0; padding: 0 20px; }
+  .biz-logo { width: 40px; height: 40px; object-fit: contain; border-radius: 8px; background: var(--card2); }
+  .biz-logo-placeholder { width: 40px; height: 40px; border-radius: 8px; background: var(--card2); display:inline-flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px; }
   @media (max-width: 700px) {
     .sidebar { display: none; }
     .main { margin-right: 0; padding: 16px; }
@@ -118,6 +120,7 @@
   <div class="sidebar">
     <div class="sidebar-title">🎡 ניהול רעננה</div>
     <button class="nav-item active" id="nav-stats" onclick="showPage('stats')">📊 סטטיסטיקות</button>
+    <button class="nav-item" id="nav-businesses" onclick="showPage('businesses')">🏢 עסקים</button>
     <button class="nav-item" id="nav-benefits" onclick="showPage('benefits')">🎁 הטבות</button>
     <button class="nav-item" id="nav-wins" onclick="showPage('wins')">🏆 זכיות</button>
     <button class="nav-item" id="nav-users" onclick="showPage('users')">👥 משתמשים</button>
@@ -144,11 +147,32 @@
       </div>
     </div>
 
+    <!-- BUSINESSES -->
+    <div class="page" id="page-businesses">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <div class="page-title" style="margin:0">🏢 עסקים</div>
+        <button class="btn btn-accent" onclick="openBusinessModal()">+ הוסף עסק</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr>
+            <th>לוגו</th><th>שם עסק</th><th>פעולות</th>
+          </tr></thead>
+          <tbody id="businesses-tbody"><tr><td colspan="3" class="empty">טוען...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- BENEFITS -->
     <div class="page" id="page-benefits">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap;">
         <div class="page-title" style="margin:0">🎁 הטבות</div>
-        <button class="btn btn-accent" onclick="openBenefitModal()">+ הוסף הטבה</button>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select id="benefits-biz-filter" style="width:auto;margin:0;padding:8px 12px;" onchange="loadBenefits()">
+            <option value="">כל העסקים</option>
+          </select>
+          <button class="btn btn-accent" onclick="openBenefitModal()">+ הוסף הטבה</button>
+        </div>
       </div>
       <div class="card">
         <table>
@@ -226,11 +250,42 @@
   </div>
 </div>
 
+<!-- BUSINESS MODAL -->
+<div id="business-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeBusinessModal()">
+  <div class="modal">
+    <h3 id="biz-modal-title">הוסף עסק</h3>
+    <input type="hidden" id="biz-modal-id">
+    <div class="form-group">
+      <label>שם עסק *</label>
+      <input type="text" id="biz-m-name" placeholder="קפה ישראל">
+    </div>
+    <div class="form-group">
+      <label>URL לוגו (אופציונלי)</label>
+      <input type="text" id="biz-m-logoUrl" placeholder="https://..." oninput="previewBizLogo(this.value)">
+      <div style="margin-top:6px;display:flex;align-items:center;gap:10px;">
+        <img id="biz-logo-preview" src="" alt="" style="display:none;width:56px;height:56px;object-fit:contain;border-radius:10px;background:var(--card2);border:1px solid rgba(255,255,255,0.1);">
+        <span id="biz-logo-preview-empty" style="display:none;color:var(--muted);font-size:13px;">אין לוגו</span>
+      </div>
+    </div>
+    <div id="biz-modal-error" style="color:var(--danger);font-size:13px;margin-bottom:8px;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeBusinessModal()">ביטול</button>
+      <button class="btn btn-accent" onclick="saveBusiness()">שמור</button>
+    </div>
+  </div>
+</div>
+
 <!-- BENEFIT MODAL -->
 <div id="benefit-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeBenefitModal()">
   <div class="modal">
     <h3 id="modal-title">הוסף הטבה</h3>
     <input type="hidden" id="modal-id">
+    <div class="form-group">
+      <label>עסק</label>
+      <select id="m-businessId" onchange="onBenefitBizChange()">
+        <option value="">— בחר עסק —</option>
+      </select>
+    </div>
     <div class="form-row">
       <div class="form-group">
         <label>שם עסק *</label>
@@ -276,18 +331,19 @@
 <script>
 let adminKey = '';
 const API = '/api';
+let allBusinesses = [];
 
 function doLogin() {
   const k = document.getElementById('admin-key-input').value.trim();
   if (!k) return;
   adminKey = k;
-  // test with a real API call
   fetch(`${API}/admin/stats`, { headers: { 'x-admin-key': adminKey } })
     .then(r => {
       if (r.ok) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app').style.display = 'block';
         loadStats();
+        loadBusinessesCache();
       } else {
         document.getElementById('login-error').textContent = 'מפתח שגוי';
         document.getElementById('login-error').style.display = 'block';
@@ -307,13 +363,19 @@ function logout() {
   document.getElementById('admin-key-input').value = '';
 }
 
-function showPage(name) {
+function showPage(name, bizFilterId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
   if (name === 'stats') loadStats();
-  if (name === 'benefits') loadBenefits();
+  if (name === 'businesses') loadBusinesses();
+  if (name === 'benefits') {
+    if (bizFilterId) {
+      document.getElementById('benefits-biz-filter').value = bizFilterId;
+    }
+    loadBenefits();
+  }
   if (name === 'wins') loadWins();
   if (name === 'users') loadUsers();
   if (name === 'settings') loadSettings();
@@ -363,16 +425,115 @@ function drawChart(data) {
   }
 }
 
+// ── BUSINESSES ─────────────────────────────────────
+async function loadBusinessesCache() {
+  try {
+    const r = await fetch(`${API}/admin/businesses`, { headers: { 'x-admin-key': adminKey } });
+    allBusinesses = r.ok ? await r.json() : [];
+    populateBusinessDropdowns();
+  } catch { allBusinesses = []; }
+}
+
+function populateBusinessDropdowns() {
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  const opts = allBusinesses.map(b => `<option value="${esc(b._id)}">${esc(b.name)}</option>`).join('');
+
+  // Benefit modal dropdown
+  const sel = document.getElementById('m-businessId');
+  if (sel) sel.innerHTML = '<option value="">— בחר עסק —</option>' + opts;
+
+  // Benefits filter dropdown
+  const filter = document.getElementById('benefits-biz-filter');
+  if (filter) {
+    const current = filter.value;
+    filter.innerHTML = '<option value="">כל העסקים</option>' + opts;
+    filter.value = current;
+  }
+}
+
+async function loadBusinesses() {
+  await loadBusinessesCache();
+  const tbody = document.getElementById('businesses-tbody');
+  if (!allBusinesses.length) { tbody.innerHTML = '<tr><td colspan="3" class="empty">אין עסקים</td></tr>'; return; }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  tbody.innerHTML = allBusinesses.map(b => `
+    <tr>
+      <td>${b.logoUrl ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.name)}" onerror="this.style.display='none'">` : `<span class="biz-logo-placeholder">🏢</span>`}</td>
+      <td style="font-weight:600">${esc(b.name)}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-accent" style="padding:5px 10px;font-size:12px" onclick="showPage('benefits','${esc(b._id)}')">🎁 הטבות</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick="openBusinessModal('${esc(b._id)}')">✏️</button>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="deleteBusiness('${esc(b._id)}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openBusinessModal(idOrNull) {
+  const b = idOrNull ? allBusinesses.find(x => x._id === idOrNull) : null;
+  document.getElementById('biz-modal-title').textContent = b ? 'ערוך עסק' : 'הוסף עסק';
+  document.getElementById('biz-modal-id').value = b ? b._id : '';
+  document.getElementById('biz-m-name').value = b ? b.name : '';
+  document.getElementById('biz-m-logoUrl').value = b ? (b.logoUrl || '') : '';
+  document.getElementById('biz-modal-error').style.display = 'none';
+  previewBizLogo(b ? (b.logoUrl || '') : '');
+  document.getElementById('business-modal').style.display = 'flex';
+}
+
+function closeBusinessModal() {
+  document.getElementById('business-modal').style.display = 'none';
+}
+
+function previewBizLogo(url) {
+  const img = document.getElementById('biz-logo-preview');
+  const empty = document.getElementById('biz-logo-preview-empty');
+  if (url && url.trim()) {
+    img.src = url.trim();
+    img.style.display = 'inline-block';
+    empty.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    empty.style.display = 'inline-block';
+  }
+}
+
+async function saveBusiness() {
+  const id = document.getElementById('biz-modal-id').value;
+  const name = document.getElementById('biz-m-name').value.trim();
+  const logoUrl = document.getElementById('biz-m-logoUrl').value.trim();
+  if (!name) {
+    document.getElementById('biz-modal-error').textContent = 'נא להזין שם עסק';
+    document.getElementById('biz-modal-error').style.display = 'block';
+    return;
+  }
+  const url = id ? `${API}/admin/businesses/${id}` : `${API}/admin/businesses`;
+  const method = id ? 'PUT' : 'POST';
+  const r = await fetch(url, { method, headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ name, logoUrl }) });
+  if (r.ok) { closeBusinessModal(); loadBusinesses(); }
+  else { const e = await r.json(); document.getElementById('biz-modal-error').textContent = e.error || 'שגיאה'; document.getElementById('biz-modal-error').style.display = 'block'; }
+}
+
+async function deleteBusiness(id) {
+  if (!confirm('למחוק עסק זה? ההטבות המקושרות לא יימחקו.')) return;
+  await fetch(`${API}/admin/businesses/${id}`, { method: 'DELETE', headers: { 'x-admin-key': adminKey } });
+  loadBusinesses();
+}
+
 // ── BENEFITS ───────────────────────────────────────
 async function loadBenefits() {
   const r = await fetch(`${API}/admin/benefits`, { headers: { 'x-admin-key': adminKey } });
-  const data = r.ok ? await r.json() : [];
+  let data = r.ok ? await r.json() : [];
+  const filterBiz = document.getElementById('benefits-biz-filter')?.value;
+  if (filterBiz) data = data.filter(b => b.businessId === filterBiz || String(b.businessId) === filterBiz);
   const tbody = document.getElementById('benefits-tbody');
   if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">אין הטבות</td></tr>'; return; }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   tbody.innerHTML = data.map(b => `
     <tr>
-      <td><span class="color-dot" style="background:${b.color || '#7B5CF6'}"></span>${b.businessName}</td>
-      <td>${b.prizeText}</td>
+      <td>
+        ${b.logoUrl ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.businessName)}" style="width:28px;height:28px;" onerror="this.style.display='none'">` : ''}
+        <span class="color-dot" style="background:${esc(b.color || '#7B5CF6')}"></span>${esc(b.businessName)}
+      </td>
+      <td>${esc(b.prizeText)}</td>
       <td>${b.remainingStock} / ${b.totalStock}</td>
       <td>${b.probability}%</td>
       <td><span class="badge ${b.isActive ? 'badge-green' : 'badge-red'}">${b.isActive ? 'פעיל' : 'כבוי'}</span></td>
@@ -383,18 +544,33 @@ async function loadBenefits() {
     </tr>`).join('');
 }
 
-function openBenefitModal(b) {
+function openBenefitModal(b, prefillBizId) {
   document.getElementById('modal-title').textContent = b ? 'ערוך הטבה' : 'הוסף הטבה';
   document.getElementById('modal-id').value = b ? b._id : '';
+  // Set business dropdown
+  const bizSel = document.getElementById('m-businessId');
+  const bizId = b ? (b.businessId || '') : (prefillBizId || '');
+  bizSel.value = bizId;
+  if (bizId && bizSel.value !== bizId) bizSel.value = '';
   document.getElementById('m-businessName').value = b ? b.businessName : '';
   document.getElementById('m-prizeText').value = b ? b.prizeText : '';
   document.getElementById('m-totalStock').value = b ? b.totalStock : '';
   document.getElementById('m-probability').value = b ? b.probability : '';
-  document.getElementById('m-logoUrl').value = b ? b.logoUrl : '';
+  document.getElementById('m-logoUrl').value = b ? (b.logoUrl || '') : '';
   document.getElementById('m-color').value = b ? (b.color || '#7B5CF6') : '#7B5CF6';
   document.getElementById('m-isActive').checked = b ? b.isActive : true;
   document.getElementById('modal-error').style.display = 'none';
   document.getElementById('benefit-modal').style.display = 'flex';
+}
+
+function onBenefitBizChange() {
+  const bizId = document.getElementById('m-businessId').value;
+  if (!bizId) return;
+  const biz = allBusinesses.find(b => b._id === bizId);
+  if (biz) {
+    document.getElementById('m-businessName').value = biz.name;
+    document.getElementById('m-logoUrl').value = biz.logoUrl || '';
+  }
 }
 
 function closeBenefitModal() {
@@ -403,6 +579,7 @@ function closeBenefitModal() {
 
 async function saveBenefit() {
   const id = document.getElementById('modal-id').value;
+  const bizId = document.getElementById('m-businessId').value.trim();
   const body = {
     businessName: document.getElementById('m-businessName').value.trim(),
     prizeText: document.getElementById('m-prizeText').value.trim(),
@@ -412,6 +589,7 @@ async function saveBenefit() {
     color: document.getElementById('m-color').value,
     isActive: document.getElementById('m-isActive').checked,
   };
+  if (bizId) body.businessId = bizId;
   if (!body.businessName || !body.prizeText || !body.totalStock || body.probability == null) {
     document.getElementById('modal-error').textContent = 'נא למלא את כל השדות החובה';
     document.getElementById('modal-error').style.display = 'block';

@@ -10,7 +10,14 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+const businessSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  logoUrl: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const benefitSchema = new mongoose.Schema({
+  businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'Business', default: null },
   businessName: { type: String, required: true },
   logoUrl: { type: String, default: '' },
   prizeText: { type: String, required: true },
@@ -51,9 +58,10 @@ const settingsSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', userSchema);
+const Business = mongoose.model('Business', businessSchema);
 const Benefit = mongoose.model('Benefit', benefitSchema);
 const Spin = mongoose.model('Spin', spinSchema);
 const Otp = mongoose.model('Otp', otpSchema);
 const Settings = mongoose.model('Settings', settingsSchema);
 
-module.exports = { User, Benefit, Spin, Otp, Settings };
+module.exports = { User, Business, Benefit, Spin, Otp, Settings };
