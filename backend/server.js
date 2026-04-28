@@ -45,9 +45,16 @@ mongoose.connection.once('open', seedSettings);
 // ─── AUTH ───────────────────────────────────────────
 
 const ADMIN_PHONE = process.env.ADMIN_PHONE || '0556674329';
+const MAX_BONUS_SPINS = 10;
 
 function normalizePhone(phone) {
-  return phone.replace(/\D/g, '');
+  let normalized = phone.replace(/\D/g, '');
+  // Treat Israeli country code (972) as local prefix (0)
+  // Israeli numbers with country code are exactly 12 digits (972 + 9 digits)
+  if (normalized.startsWith('972') && normalized.length === 12) {
+    normalized = '0' + normalized.slice(3);
+  }
+  return normalized;
 }
 
 app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
@@ -57,10 +64,12 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
       return res.status(400).json({ error: 'חסרים פרטים' });
     }
 
-    let user = await User.findOne({ phone });
+    const normalizedPhone = normalizePhone(phone);
+
+    let user = await User.findOne({ phone: normalizedPhone });
     const isReturningUser = !!user;
     if (!user) {
-      user = await User.create({ phone, name, isVerified: true });
+      user = await User.create({ phone: normalizedPhone, name, isVerified: true });
     } else {
       await User.updateOne({ _id: user._id }, { isVerified: true, name });
       user = await User.findById(user._id);
@@ -71,8 +80,12 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     if (user.lastSpin) {
       const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
       if (next > new Date()) {
-        canSpin = false;
-        nextSpinAt = next;
+        if (user.bonusSpins > 0) {
+          canSpin = true;
+        } else {
+          canSpin = false;
+          nextSpinAt = next;
+        }
       }
     }
 
@@ -84,18 +97,22 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/auth/verify-otp', async (req, res) => {
+app.post('/api/auth/verify-otp', otpLimiter, async (req, res) => {
   try {
     const { phone, name, code } = req.body;
-    const otp = await Otp.findOne({ phone, code, used: false });
+    if (!phone || !code || typeof phone !== 'string' || typeof code !== 'string') {
+      return res.status(400).json({ error: 'חסרים פרטים' });
+    }
+    const normalizedPhone = normalizePhone(phone);
+    const otp = await Otp.findOne({ phone: normalizedPhone, code, used: false });
     if (!otp || otp.expiresAt < new Date()) {
       return res.status(401).json({ error: 'קוד שגוי או פג תוקף' });
     }
     await Otp.updateOne({ _id: otp._id }, { used: true });
 
-    let user = await User.findOne({ phone });
+    let user = await User.findOne({ phone: normalizedPhone });
     if (!user) {
-      user = await User.create({ phone, name, isVerified: true });
+      user = await User.create({ phone: normalizedPhone, name, isVerified: true });
     } else {
       await User.updateOne({ _id: user._id }, { isVerified: true, name });
     }
@@ -142,11 +159,15 @@ app.get('/api/user/status', auth, userLimiter, async (req, res) => {
     if (user.lastSpin) {
       const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
       if (next > new Date()) {
-        canSpin = false;
-        nextSpinAt = next;
+        if (user.bonusSpins > 0) {
+          canSpin = true;
+        } else {
+          canSpin = false;
+          nextSpinAt = next;
+        }
       }
     }
-    res.json({ name: user.name, canSpin, nextSpinAt });
+    res.json({ name: user.name, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
   } catch (err) {
     res.status(500).json({ error: 'שגיאת שרת' });
   }
@@ -175,7 +196,11 @@ app.post('/api/spin', auth, spinLimiter, async (req, res) => {
     if (user.lastSpin) {
       const nextSpin = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
       if (nextSpin > new Date()) {
-        return res.status(429).json({ error: 'כבר סובבת היום!', nextSpinAt: nextSpin });
+        if (user.bonusSpins > 0) {
+          await User.updateOne({ _id: user._id }, { $inc: { bonusSpins: -1 } });
+        } else {
+          return res.status(429).json({ error: 'כבר סובבת היום!', nextSpinAt: nextSpin });
+        }
       }
     }
 
@@ -270,10 +295,33 @@ app.get('/api/admin/wins', adminAuth, adminLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/admin/users', adminAuth, async (req, res) => {
+app.get('/api/admin/users', adminAuth, adminLimiter, async (req, res) => {
   try {
-    const users = await User.find().select('name phone spinCount lastSpin createdAt').sort({ createdAt: -1 });
+    const users = await User.find().select('name phone spinCount lastSpin bonusSpins createdAt').sort({ createdAt: -1 });
     res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+app.post('/api/admin/grant-bonus-spins', adminAuth, adminLimiter, async (req, res) => {
+  try {
+    const count = parseInt(req.body.count, 10);
+    if (!Number.isInteger(count) || count < 1 || count > MAX_BONUS_SPINS) {
+      return res.status(400).json({ error: `count חייב להיות מספר שלם בין 1 ל-${MAX_BONUS_SPINS}` });
+    }
+    await User.updateMany({}, { $set: { bonusSpins: count } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+app.post('/api/admin/users/:id/grant-spin', adminAuth, adminLimiter, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, { $inc: { bonusSpins: 1 } }, { new: true });
+    if (!user) return res.status(404).json({ error: 'משתמש לא נמצא' });
+    res.json({ success: true, bonusSpins: user.bonusSpins });
   } catch (err) {
     res.status(500).json({ error: 'שגיאת שרת' });
   }

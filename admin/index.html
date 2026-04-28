@@ -200,8 +200,8 @@
       <div class="page-title">👥 משתמשים</div>
       <div class="card">
         <table>
-          <thead><tr><th>שם</th><th>טלפון</th><th>סיבובים</th><th>סיבוב אחרון</th><th>הצטרף</th></tr></thead>
-          <tbody id="users-tbody"><tr><td colspan="5" class="empty">טוען...</td></tr></tbody>
+          <thead><tr><th>שם</th><th>טלפון</th><th>סיבובים</th><th>בונוס</th><th>סיבוב אחרון</th><th>הצטרף</th><th>פעולות</th></tr></thead>
+          <tbody id="users-tbody"><tr><td colspan="7" class="empty">טוען...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -235,6 +235,19 @@
             <input type="number" id="set-winnerRatioSpins" min="1" max="100000" style="width:80px;margin:0" placeholder="100" oninput="onWinnerRatioChange()">
             <span style="color:var(--muted)">סיבובים</span>
             <span style="color:var(--accent2);font-size:13px;white-space:nowrap" id="set-ratio-pct"></span>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <h2>🎁 מתן סיבובי בונוס</h2>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h4>תן סיבובי בונוס לכל המשתמשים</h4>
+            <p>כל המשתמשים יוכלו לסובב עוד N פעמים ב-24 השעות הקרובות</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="number" id="bonus-spin-count" min="1" max="10" value="2" style="width:70px;margin:0">
+            <button class="btn btn-accent" style="padding:9px 16px;" onclick="grantBonusSpinsAll()">תן לכולם</button>
           </div>
         </div>
       </div>
@@ -634,15 +647,58 @@ async function loadUsers() {
   const r = await fetch(`${API}/admin/users`, { headers: { 'x-admin-key': adminKey } });
   const data = r.ok ? await r.json() : [];
   const tbody = document.getElementById('users-tbody');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">אין משתמשים</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">אין משתמשים</td></tr>'; return; }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   tbody.innerHTML = data.map(u => `
     <tr>
-      <td>${u.name}</td>
-      <td dir="ltr">${u.phone}</td>
+      <td>${esc(u.name)}</td>
+      <td dir="ltr">${esc(u.phone)}</td>
       <td>${u.spinCount}</td>
+      <td><span class="badge ${u.bonusSpins > 0 ? 'badge-green' : ''}" style="${u.bonusSpins > 0 ? '' : 'color:var(--muted)'}">${u.bonusSpins || 0}</span></td>
       <td>${u.lastSpin ? new Date(u.lastSpin).toLocaleString('he-IL') : '—'}</td>
       <td>${new Date(u.createdAt).toLocaleDateString('he-IL')}</td>
+      <td><button class="btn btn-ghost" style="padding:5px 12px;font-size:12px" onclick="grantSpinToUser('${esc(u._id)}', this)">🎁 סיבוב נוסף</button></td>
     </tr>`).join('');
+}
+
+async function grantSpinToUser(userId, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API}/admin/users/${userId}/grant-spin`, {
+      method: 'POST',
+      headers: { 'x-admin-key': adminKey }
+    });
+    if (r.ok) {
+      showToast('סיבוב נוסף הוענק ✓');
+      loadUsers();
+    } else {
+      const e = await r.json();
+      showToast(e.error || 'שגיאה', true);
+    }
+  } catch {
+    showToast('בעיית חיבור', true);
+  }
+  btn.disabled = false;
+}
+
+async function grantBonusSpinsAll() {
+  const count = parseInt(document.getElementById('bonus-spin-count').value, 10);
+  if (!count || count < 1 || count > 10) {
+    showToast('הכנס מספר בין 1 ל-10', true);
+    return;
+  }
+  if (!confirm(`לתת ${count} סיבובי בונוס לכל המשתמשים?`)) return;
+  try {
+    const r = await fetch(`${API}/admin/grant-bonus-spins`, {
+      method: 'POST',
+      headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count })
+    });
+    if (r.ok) showToast(`${count} סיבובי בונוס הוענקו לכולם ✓`);
+    else { const e = await r.json(); showToast(e.error || 'שגיאה', true); }
+  } catch {
+    showToast('בעיית חיבור', true);
+  }
 }
 
 // ── SETTINGS ───────────────────────────────────────
