@@ -414,6 +414,37 @@
     box-shadow: 0 4px 22px rgba(37,211,102,0.3);
   }
   .btn-whatsapp:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(37,211,102,0.5); }
+
+  /* ── Gradient text fallback for browsers that don't support background-clip:text ── */
+  @supports not (-webkit-background-clip: text) {
+    .header h1  { color: var(--gold); }
+    .prize-name { color: var(--gold); }
+  }
+
+  /* ── Respect reduced-motion preference ── */
+  @media (prefers-reduced-motion: reduce) {
+    body                 { animation: none; background-position: 0% 50%; }
+    body::before         { animation: none; }
+    .bg-orb              { animation: none; }
+    .bg-particle         { animation: none; display: none; }
+    .logo-badge          { animation: none; }
+    .header h1           { animation: none; background-position: 0% center; }
+    .header::after       { animation: none; opacity: 0.6; width: 80px; }
+    .screen.active       { animation: none; }
+    .btn-gold::after,
+    #spin-btn::after     { animation: none; display: none; }
+    .contact-icon        { animation: none; }
+    .vip-card            { animation: none; }
+    .vip-card::before    { animation: none; display: none; }
+    #wheel-canvas        { animation: none; }
+    .wheel-pointer       { animation: none; }
+    #spin-btn            { animation: none; }
+    .warning-banner      { animation: none; }
+    .step-dot.active     { box-shadow: 0 0 6px rgba(245,200,66,0.4); }
+    .win-icon,
+    .loss-emoji          { animation: none; }
+    .prize-name          { animation: none; background-position: 0% center; }
+  }
 </style>
 </head>
 <body>
