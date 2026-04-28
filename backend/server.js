@@ -6,7 +6,24 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
+const admin = require('firebase-admin');
 const { User, Business, Benefit, Spin, Otp, Settings } = require('./models');
+
+// ─── FIREBASE ADMIN INIT ─────────────────────────────
+if (
+  process.env.FIREBASE_PROJECT_ID &&
+  process.env.FIREBASE_CLIENT_EMAIL &&
+  process.env.FIREBASE_PRIVATE_KEY &&
+  !admin.apps.length
+) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId:   process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey:  process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }),
+  });
+}
 
 const app = express();
 app.set('trust proxy', 1);
@@ -152,6 +169,72 @@ app.post('/api/auth/verify-otp', otpLimiter, async (req, res) => {
 
     const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
     res.json({ success: true, token, userId: user._id, name: user.name });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+// ─── FIREBASE AUTH ENDPOINT ─────────────────────────
+
+app.post('/api/auth/firebase-verify', otpLimiter, async (req, res) => {
+  try {
+    if (!admin.apps.length) {
+      return res.status(503).json({ error: 'Firebase לא מוגדר בשרת – פנה למנהל' });
+    }
+    const { idToken, name } = req.body;
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ error: 'חסר idToken' });
+    }
+
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (firebaseErr) {
+      const code = firebaseErr.code || '';
+      if (code === 'auth/id-token-expired') return res.status(401).json({ error: 'פג תוקף, נסה שוב' });
+      return res.status(401).json({ error: 'token לא תקין' });
+    }
+
+    const firebasePhone = decodedToken.phone_number;
+    if (!firebasePhone) {
+      return res.status(400).json({ error: 'לא נמצא מספר טלפון ב-token' });
+    }
+
+    const normalizedPhone = normalizePhone(firebasePhone);
+    let user = await User.findOne({ phone: normalizedPhone });
+
+    // New user without a name — ask the client to re-submit with a name
+    if (!user && (!name || typeof name !== 'string' || !name.trim())) {
+      return res.json({ isNewUser: true, needsName: true });
+    }
+
+    const isNewUser = !user;
+    if (!user) {
+      user = await User.create({ phone: normalizedPhone, name: name.trim(), isVerified: true });
+    } else {
+      const upd = { isVerified: true };
+      if (name && typeof name === 'string' && name.trim()) upd.name = name.trim();
+      await User.updateOne({ _id: user._id }, upd);
+      user = await User.findById(user._id);
+    }
+
+    let canSpin = true;
+    let nextSpinAt = null;
+    if (user.lastSpin) {
+      const next = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
+      if (next > new Date()) {
+        if (user.bonusSpins > 0) {
+          canSpin = true;
+        } else {
+          canSpin = false;
+          nextSpinAt = next;
+        }
+      }
+    }
+
+    const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
+    return res.json({ success: true, token, userId: user._id, name: user.name, isNewUser, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'שגיאת שרת' });
