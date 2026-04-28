@@ -261,7 +261,7 @@ app.post('/api/spin', auth, spinLimiter, async (req, res) => {
 
     if (winner) {
       await Benefit.updateOne({ _id: winner._id }, { $inc: { remainingStock: -1 } });
-      const verificationCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+      const verificationCode = crypto.randomBytes(2).toString('hex').toUpperCase();
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const spin = await Spin.create({
         userId: user._id, benefitId: winner._id,
