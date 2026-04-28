@@ -177,9 +177,9 @@
       <div class="card">
         <table>
           <thead><tr>
-            <th>עסק</th><th>פרס</th><th>מלאי</th><th>הסתברות</th><th>סטטוס</th><th>פעולות</th>
+            <th>עסק</th><th>פרס</th><th>מלאי</th><th>סטטוס</th><th>פעולות</th>
           </tr></thead>
-          <tbody id="benefits-tbody"><tr><td colspan="6" class="empty">טוען...</td></tr></tbody>
+          <tbody id="benefits-tbody"><tr><td colspan="5" class="empty">טוען...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -329,19 +329,13 @@
         <input type="number" id="m-totalStock" placeholder="50" min="1">
       </div>
       <div class="form-group">
-        <label>הסתברות (0-100) *</label>
-        <input type="number" id="m-probability" placeholder="10" min="0" max="100">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>URL לוגו (אופציונלי)</label>
-        <input type="text" id="m-logoUrl" placeholder="https://...">
-      </div>
-      <div class="form-group">
         <label>צבע</label>
         <input type="color" id="m-color" value="#7B5CF6" style="height:44px;padding:4px">
       </div>
+    </div>
+    <div class="form-group">
+      <label>URL לוגו (אופציונלי)</label>
+      <input type="text" id="m-logoUrl" placeholder="https://...">
     </div>
     <div class="form-group">
       <label>פעיל</label>
@@ -604,7 +598,7 @@ async function loadBenefits() {
   const filterBiz = document.getElementById('benefits-biz-filter')?.value;
   if (filterBiz) data = data.filter(b => b.businessId === filterBiz || String(b.businessId) === filterBiz);
   const tbody = document.getElementById('benefits-tbody');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">אין הטבות</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">אין הטבות</td></tr>'; return; }
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   tbody.innerHTML = data.map(b => `
     <tr>
@@ -614,7 +608,6 @@ async function loadBenefits() {
       </td>
       <td>${esc(b.prizeText)}</td>
       <td>${b.remainingStock} / ${b.totalStock}</td>
-      <td>${b.probability}%</td>
       <td><span class="badge ${b.isActive ? 'badge-green' : 'badge-red'}">${b.isActive ? 'פעיל' : 'כבוי'}</span></td>
       <td style="display:flex;gap:6px">
         <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick='openBenefitModal(${JSON.stringify(b)})'>✏️</button>
@@ -634,7 +627,6 @@ function openBenefitModal(b, prefillBizId) {
   document.getElementById('m-businessName').value = b ? b.businessName : '';
   document.getElementById('m-prizeText').value = b ? b.prizeText : '';
   document.getElementById('m-totalStock').value = b ? b.totalStock : '';
-  document.getElementById('m-probability').value = b ? b.probability : '';
   document.getElementById('m-logoUrl').value = b ? (b.logoUrl || '') : '';
   document.getElementById('m-color').value = b ? (b.color || '#7B5CF6') : '#7B5CF6';
   document.getElementById('m-isActive').checked = b ? b.isActive : true;
@@ -663,13 +655,13 @@ async function saveBenefit() {
     businessName: document.getElementById('m-businessName').value.trim(),
     prizeText: document.getElementById('m-prizeText').value.trim(),
     totalStock: +document.getElementById('m-totalStock').value,
-    probability: +document.getElementById('m-probability').value,
+    probability: 1,
     logoUrl: document.getElementById('m-logoUrl').value.trim(),
     color: document.getElementById('m-color').value,
     isActive: document.getElementById('m-isActive').checked,
   };
   if (bizId) body.businessId = bizId;
-  if (!body.businessName || !body.prizeText || !body.totalStock || body.probability == null) {
+  if (!body.businessName || !body.prizeText || !body.totalStock) {
     document.getElementById('modal-error').textContent = 'נא למלא את כל השדות החובה';
     document.getElementById('modal-error').style.display = 'block';
     return;
