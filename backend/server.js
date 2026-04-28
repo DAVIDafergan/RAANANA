@@ -115,7 +115,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     }
 
     const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
-    return res.json({ success: true, autoVerified: true, token, userId: user._id, name: user.name, isReturningUser, canSpin, nextSpinAt });
+    return res.json({ success: true, autoVerified: true, token, userId: user._id, name: user.name, isReturningUser, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'שגיאת שרת' });
@@ -218,10 +218,15 @@ app.post('/api/spin', auth, spinLimiter, async (req, res) => {
       return res.status(403).json({ error: 'הגלגל כבה כרגע, חזרו מחר!' });
     }
 
+    let isUsingBonusSpin = false;
+    let originalNextSpinAt = null;
+
     if (user.lastSpin) {
       const nextSpin = new Date(user.lastSpin.getTime() + 24 * 60 * 60 * 1000);
       if (nextSpin > new Date()) {
         if (user.bonusSpins > 0) {
+          isUsingBonusSpin = true;
+          originalNextSpinAt = nextSpin;
           await User.updateOne({ _id: user._id }, { $inc: { bonusSpins: -1 } });
         } else {
           return res.status(429).json({ error: 'כבר סובבת היום!', nextSpinAt: nextSpin });
@@ -237,7 +242,11 @@ app.post('/api/spin', auth, spinLimiter, async (req, res) => {
     const isWeekend = [5, 6].includes(new Date().getDay());
     if (weekendSetting?.value && isWeekend) lossProb = Math.max(lossProb - 20, 20);
 
-    await User.updateOne({ _id: user._id }, { lastSpin: new Date(), $inc: { spinCount: 1 } });
+    if (isUsingBonusSpin) {
+      await User.updateOne({ _id: user._id }, { $inc: { spinCount: 1 } });
+    } else {
+      await User.updateOne({ _id: user._id }, { lastSpin: new Date(), $inc: { spinCount: 1 } });
+    }
 
     const rand = Math.random() * 100;
     let winner = null;
@@ -265,7 +274,7 @@ app.post('/api/spin', auth, spinLimiter, async (req, res) => {
       });
     } else {
       await Spin.create({ userId: user._id, isWin: false, ipAddress: req.ip });
-      return res.json({ isWin: false, nextSpinAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
+      return res.json({ isWin: false, nextSpinAt: isUsingBonusSpin ? originalNextSpinAt : new Date(Date.now() + 24 * 60 * 60 * 1000) });
     }
   } catch (err) {
     console.error(err);
