@@ -426,6 +426,8 @@ async function verifyOTP() {
 function contactSaved() { goTo('screen-wheel', 3); loadWheelData(); }
 
 async function loadWheelData() {
+  const spinBtn = document.getElementById('spin-btn');
+  if (spinBtn) { spinBtn.disabled = true; spinBtn.textContent = '⏳ טוען...'; }
   try {
     const r = await fetch(`${API}/api/benefits`, { headers: { Authorization: `Bearer ${token}` } });
     const d = await r.json();
@@ -436,15 +438,22 @@ async function loadWheelData() {
       { businessName: 'עסקים', prizeText: 'הנחה', color: '#E85D04' },
     ];
   }
-  drawWheel();
+  if (!isSpinning) {
+    drawWheel();
+    if (spinBtn) { spinBtn.disabled = false; spinBtn.textContent = '🎡 סובב!'; }
+  }
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
-function drawWheel() {
+const LOSS_SEGMENT = { prizeText: 'נסה שוב 😅', color: '#2D2D4E' };
+function buildSegments(benefits) {
+  return [...benefits, LOSS_SEGMENT];
+}
+function drawWheel(frozenSegments) {
   const canvas = document.getElementById('wheel-canvas');
   const ctx = canvas.getContext('2d');
   const cx = 160, cy = 160, r = 150;
-  const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
+  const segments = frozenSegments || buildSegments(wheelBenefits);
   const n = segments.length;
   const slice = (Math.PI * 2) / n;
 
@@ -513,6 +522,14 @@ function drawWheel() {
 
 async function doSpin() {
   if (isSpinning) return;
+
+  // Freeze segments NOW before any async work – prevents loadWheelData() racing mid-animation
+  const frozenBenefits = [...wheelBenefits];
+  if (frozenBenefits.length === 0) {
+    alert('הגלגל עדיין טוען, נסה שנית');
+    return;
+  }
+
   isSpinning = true;
   document.getElementById('spin-btn').disabled = true;
 
@@ -532,15 +549,15 @@ async function doSpin() {
     return;
   }
 
-  // Determine which segment to land on
-  const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
+  // Determine which segment to land on using the FROZEN segments (not global wheelBenefits)
+  const segments = buildSegments(frozenBenefits);
   const n = segments.length;
   const slice = (Math.PI * 2) / n;
   let targetIdx = n - 1; // default: "נסה שוב"
 
   if (result.ok && result.data.isWin) {
     const prizeText = result.data.prize.prizeText;
-    const found = wheelBenefits.findIndex(b => b.prizeText === prizeText);
+    const found = frozenBenefits.findIndex(b => b.prizeText === prizeText);
     if (found !== -1) targetIdx = found;
     else targetIdx = Math.floor(Math.random() * (n - 1)); // any prize segment
   }
@@ -549,7 +566,7 @@ async function doSpin() {
   // Center angle of segment i = currentAngle + i*slice + slice/2
   // We need: finalAngle + targetIdx*slice + slice/2 ≡ -π/2  (mod 2π)
   const targetCenter = -Math.PI / 2 - targetIdx * slice - slice / 2;
-  const jitter = (Math.random() - 0.5) * slice * 0.5; // slight randomness within segment
+  const jitter = (Math.random() - 0.5) * slice * 0.3; // slight randomness within segment
   let delta = (targetCenter + jitter - currentAngle) % (Math.PI * 2);
   if (delta < 0) delta += Math.PI * 2;
   if (delta < Math.PI * 0.5) delta += Math.PI * 2; // ensure meaningful final rotation
@@ -568,12 +585,16 @@ async function doSpin() {
     // Ease-out cubic (faster start, smooth stop)
     const ease = 1 - Math.pow(1 - p, 3);
     currentAngle = startAngle + totalRot * ease;
-    drawWheel();
+    drawWheel(segments); // always use frozen segments to keep visual consistent
     if (p < 1) {
       requestAnimationFrame(animate);
     } else {
+      // Normalize currentAngle to [0, 2π) to prevent floating-point drift across many spins
+      currentAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
       isSpinning = false;
       document.getElementById('spin-btn').disabled = false;
+      // Re-draw with current wheelBenefits now that spin is done
+      drawWheel();
       if (result.status === 429) {
         showLoss(result.data.nextSpinAt);
       } else if (result.ok && result.data.isWin) {
