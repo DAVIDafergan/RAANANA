@@ -221,11 +221,15 @@ app.post('/api/auth/verify-otp', otpLimiter, async (req, res) => {
 
     let user = await User.findOne({ phone: normalizedPhone });
     const isNewUser = !user;
+    const trimmedName = (typeof name === 'string') ? name.trim() : '';
+    if (!user && !trimmedName) {
+      return res.status(400).json({ error: 'חסר שם משתמש' });
+    }
     if (!user) {
-      user = await User.create({ phone: normalizedPhone, name: name?.trim() || '', isVerified: true });
+      user = await User.create({ phone: normalizedPhone, name: trimmedName, isVerified: true });
     } else {
       const upd = { isVerified: true };
-      if (name && typeof name === 'string' && name.trim()) upd.name = name.trim();
+      if (trimmedName) upd.name = trimmedName;
       await User.updateOne({ _id: user._id }, upd);
       user = await User.findById(user._id);
     }
