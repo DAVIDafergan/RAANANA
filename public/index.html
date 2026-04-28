@@ -637,7 +637,40 @@ function updateTicker() {
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
-const SEGMENT_ICONS = ['☕','🍕','🛍️','💈','🍦','🎭','🎵','💆','🍔','🌿','🎂','💎'];
+
+function getIconForBenefit(b) {
+  const text = ((b.businessName || '') + ' ' + (b.prizeText || '')).toLowerCase();
+  if (/קפה|coffee|כוס|אספרסו|לאטה/.test(text)) return '☕';
+  if (/פיצה|pizza/.test(text)) return '🍕';
+  if (/בגד|חנות|fashion|shop|מלבוש|אופנה/.test(text)) return '🛍️';
+  if (/תספורת|מספרה|שיער|hair/.test(text)) return '✂️';
+  if (/גלידה|ice/.test(text)) return '🍦';
+  if (/מסעדה|restaurant/.test(text)) return '🍽️';
+  if (/יופי|ספא|spa|beauty|ציפורן|nail|פד/.test(text)) return '💅';
+  if (/כושר|gym|ספורט|sport|פילאטיס|יוגה/.test(text)) return '💪';
+  if (/פרח|flower|בוקט/.test(text)) return '🌸';
+  if (/מאפה|לחם|עוגה|cake|bread|bake|אופה/.test(text)) return '🥐';
+  if (/המבורגר|burger/.test(text)) return '🍔';
+  if (/יין|wine|בר|bar|אלכוהול/.test(text)) return '🍷';
+  if (/ספר|book|קריא/.test(text)) return '📚';
+  if (/מוזיק|שיר|music/.test(text)) return '🎵';
+  if (/הנחה|discount|אחוז|%/.test(text)) return '💰';
+  if (/ילד|kid|צעצוע|toy|פארק|park/.test(text)) return '🎠';
+  return '🎁';
+}
+
+// Assign consistent colors & icons to each unique benefit (businessName+prizeText)
+function buildSegmentMeta(benefits) {
+  const keyMap = {};
+  let colorIdx = 0;
+  return benefits.map(b => {
+    const key = (b.businessName || '') + '|' + (b.prizeText || '');
+    if (!keyMap[key]) {
+      keyMap[key] = { color: b.color || COLORS[colorIdx++ % COLORS.length], icon: getIconForBenefit(b) };
+    }
+    return keyMap[key];
+  });
+}
 
 function drawWheel() {
   const canvas = document.getElementById('wheel-canvas');
@@ -654,20 +687,36 @@ function drawWheel() {
   const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
   const n = segments.length;
   const slice = (Math.PI * 2) / n;
+  const meta = buildSegmentMeta(wheelBenefits);
 
   ctx.clearRect(0, 0, cssSize, cssSize);
 
+  // Draw outer shadow ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
   segments.forEach((seg, i) => {
     const a0 = currentAngle + i * slice, a1 = a0 + slice;
+    const isLoss = i === segments.length - 1;
+    const segColor = isLoss ? '#2D2D4E' : (meta[i] ? meta[i].color : (seg.color || COLORS[i % COLORS.length]));
 
-    // Segment fill
+    // Gradient fill
+    const gradMidX = cx + Math.cos(a0 + slice / 2) * r * 0.6;
+    const gradMidY = cy + Math.sin(a0 + slice / 2) * r * 0.6;
+    const grad = ctx.createRadialGradient(gradMidX, gradMidY, 0, cx, cy, r);
+    grad.addColorStop(0, lightenColor(segColor, 30));
+    grad.addColorStop(1, segColor);
+
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, a0, a1);
     ctx.closePath();
-    ctx.fillStyle = seg.color || COLORS[i % COLORS.length];
+    ctx.fillStyle = grad;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -677,23 +726,21 @@ function drawWheel() {
     ctx.rotate(a0 + slice / 2);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#fff';
-    ctx.shadowColor = 'rgba(0,0,0,0.7)';
-    ctx.shadowBlur = 3;
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
 
     const maxLen = n > 8 ? 7 : 10;
-    const isLoss = seg.color === '#2D2D4E';
-    const icon = isLoss ? '' : SEGMENT_ICONS[i % SEGMENT_ICONS.length];
+    const icon = isLoss ? '😅' : (meta[i] ? meta[i].icon : '🎁');
+    const iconSize = n > 8 ? 11 : 14;
 
-    if (icon) {
-      ctx.shadowBlur = 0;
-      ctx.font = `${n > 8 ? 11 : 14}px sans-serif`;
-      ctx.fillText(icon, r - 4, 5);
-      ctx.shadowBlur = 3;
-    }
+    ctx.shadowBlur = 0;
+    ctx.font = `${iconSize}px sans-serif`;
+    ctx.fillText(icon, r - 5, 5);
+    ctx.shadowBlur = 4;
 
-    const textX = icon ? r - (n > 8 ? 20 : 24) : r - 8;
+    const textX = r - (n > 8 ? 21 : 26);
 
-    if (seg.businessName) {
+    if (!isLoss && seg.businessName) {
       const biz = seg.businessName.length > maxLen ? seg.businessName.slice(0, maxLen) + '…' : seg.businessName;
       const prize = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen) + '…' : seg.prizeText;
       ctx.font = `bold ${n > 8 ? 10 : 12}px 'Assistant', sans-serif`;
@@ -712,78 +759,164 @@ function drawWheel() {
     ctx.restore();
   });
 
-  // Decorative outer ring
+  // Decorative outer ring with gold glow
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(245,200,66,0.45)';
+  ctx.strokeStyle = '#F5C842';
   ctx.lineWidth = 3;
+  ctx.shadowColor = 'rgba(245,200,66,0.6)';
+  ctx.shadowBlur = 10;
   ctx.stroke();
+  ctx.shadowBlur = 0;
 
-  // Center circle
+  // Decorative dot markers on the ring
+  const dotCount = Math.min(n * 2, 24);
+  for (let d = 0; d < dotCount; d++) {
+    const angle = (Math.PI * 2 / dotCount) * d + currentAngle;
+    const dx = cx + Math.cos(angle) * (r + 10);
+    const dy = cy + Math.sin(angle) * (r + 10);
+    ctx.beginPath();
+    ctx.arc(dx, dy, d % 2 === 0 ? 3 : 2, 0, Math.PI * 2);
+    ctx.fillStyle = d % 2 === 0 ? '#F5C842' : 'rgba(255,255,255,0.4)';
+    ctx.fill();
+  }
+
+  // Center circle hub
+  const hubGrad = ctx.createRadialGradient(cx - 6, cy - 6, 2, cx, cy, 26);
+  hubGrad.addColorStop(0, '#2A1E6E');
+  hubGrad.addColorStop(1, '#0D0D1A');
   ctx.beginPath();
   ctx.arc(cx, cy, 26, 0, Math.PI * 2);
-  ctx.fillStyle = '#0D0D1A';
+  ctx.fillStyle = hubGrad;
   ctx.fill();
   ctx.strokeStyle = '#F5C842';
   ctx.lineWidth = 3;
+  ctx.shadowColor = 'rgba(245,200,66,0.5)';
+  ctx.shadowBlur = 8;
   ctx.stroke();
+  ctx.shadowBlur = 0;
   ctx.font = 'bold 18px sans-serif';
   ctx.fillStyle = '#F5C842';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(0,0,0,0)';
   ctx.fillText('🎡', cx, cy);
+}
+
+function lightenColor(hex, amount) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, (num >> 16) + amount);
+  const g = Math.min(255, ((num >> 8) & 0xff) + amount);
+  const b = Math.min(255, (num & 0xff) + amount);
+  return `rgb(${r},${g},${b})`;
 }
 
 async function doSpin() {
   if (isSpinning) return;
   isSpinning = true;
-  document.getElementById('spin-btn').disabled = true;
+  const btn = document.getElementById('spin-btn');
+  btn.disabled = true;
 
-  const totalRot = Math.PI * 2 * (5 + Math.random() * 6);
-  const duration = 4500;
-  const startAngle = currentAngle;
-  const start = performance.now();
-
-  function animate(now) {
-    const elapsed = now - start;
-    const p = Math.min(elapsed / duration, 1);
-    const ease = 1 - Math.pow(1 - p, 4);
-    currentAngle = startAngle + totalRot * ease;
-    drawWheel();
-    if (p < 1) { requestAnimationFrame(animate); }
-    else { callSpinAPI(); }
-  }
-  requestAnimationFrame(animate);
-}
-
-async function callSpinAPI() {
-  try {
-    const r = await fetch(`${API}/api/spin`, {
+  // Start API call immediately (parallel with animation)
+  const apiPromise = (async () => {
+    const res = await fetch(`${API}/api/spin`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
     });
-    const d = await r.json();
-    isSpinning = false;
-    document.getElementById('spin-btn').disabled = false;
-    hideBonusBanner();
-    if (r.status === 403) {
-      goTo('screen-loss', 3);
-      document.querySelector('.loss-emoji').textContent = '🔒';
-      document.querySelector('.loss-msg').textContent = 'הגלגל סגור כרגע';
-      document.querySelector('.loss-sub').textContent = d.error || 'הגלגל כבוי, חזרו מאוחר יותר';
-      document.querySelector('.next-spin-box').style.display = 'none';
-    } else if (r.status === 429) {
-      setLossMessage(d.nextSpinAt);
-    } else if (r.ok && d.isWin) {
-      showWin(d);
-    } else {
-      setLossMessage(d.nextSpinAt);
+    const data = await res.json();
+    return { r: res, d: data };
+  })();
+
+  // Phase 1: free spin for at least 3 seconds
+  const phase1Duration = 3000;
+  const freeSpinRot = Math.PI * 2 * 4; // 4 full rotations in 3s
+  const startAngle = currentAngle;
+  const phase1Start = performance.now();
+
+  let apiResult = null;
+  apiPromise.then(res => { apiResult = res; }).catch(() => {});
+
+  await new Promise(resolve => {
+    function phase1(now) {
+      const elapsed = now - phase1Start;
+      const t = Math.min(elapsed / phase1Duration, 1);
+      currentAngle = startAngle + freeSpinRot * t;
+      drawWheel();
+      if (t < 1) requestAnimationFrame(phase1);
+      else resolve();
     }
+    requestAnimationFrame(phase1);
+  });
+
+  // Wait for API result if not yet received
+  let spinRes;
+  try {
+    spinRes = await apiPromise;
   } catch {
     isSpinning = false;
-    document.getElementById('spin-btn').disabled = false;
+    btn.disabled = false;
     alert('בעיית חיבור, נסה שנית');
+    return;
+  }
+
+  const { r, d } = spinRes;
+
+  // Determine which segment to land on
+  const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
+  const n = segments.length;
+  const slice = (Math.PI * 2) / n;
+
+  let targetIndex = n - 1; // default: "try again" (last segment)
+  if (r.ok && d.isWin && d.prize) {
+    const idx = wheelBenefits.findIndex(
+      b => b.businessName === d.prize.businessName && b.prizeText === d.prize.prizeText
+    );
+    if (idx >= 0) targetIndex = idx;
+  }
+
+  // Calculate rotation needed so targetIndex segment sits under the top pointer (-π/2)
+  const segCenterAngle = currentAngle + targetIndex * slice + slice / 2;
+  const topPointer = -Math.PI / 2;
+  // Normalize to [0, 2π) then add at least one full rotation for a natural spin feel
+  let delta = ((topPointer - segCenterAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  delta += Math.PI * 2; // ensure at least one forward full rotation
+  // Small random offset within segment for natural feel
+  delta += (Math.random() - 0.5) * slice * 0.5;
+
+  // Phase 2: decelerate to correct segment (1.8s)
+  const phase2Duration = 1800;
+  const phase2StartAngle = currentAngle;
+  const phase2Start = performance.now();
+
+  await new Promise(resolve => {
+    function phase2(now) {
+      const elapsed = now - phase2Start;
+      const p = Math.min(elapsed / phase2Duration, 1);
+      const ease = 1 - Math.pow(1 - p, 4);
+      currentAngle = phase2StartAngle + delta * ease;
+      drawWheel();
+      if (p < 1) requestAnimationFrame(phase2);
+      else resolve();
+    }
+    requestAnimationFrame(phase2);
+  });
+
+  // Show result
+  isSpinning = false;
+  btn.disabled = false;
+  hideBonusBanner();
+
+  if (r.status === 403) {
+    goTo('screen-loss', 3);
+    document.querySelector('.loss-emoji').textContent = '🔒';
+    document.querySelector('.loss-msg').textContent = 'הגלגל סגור כרגע';
+    document.querySelector('.loss-sub').textContent = d.error || 'הגלגל כבוי, חזרו מאוחר יותר';
+    document.querySelector('.next-spin-box').style.display = 'none';
+  } else if (r.status === 429) {
+    setLossMessage(d.nextSpinAt);
+  } else if (r.ok && d.isWin) {
+    showWin(d);
+  } else {
+    setLossMessage(d.nextSpinAt);
   }
 }
 
