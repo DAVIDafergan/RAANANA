@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   lastSpin: { type: Date, default: null },
   contactSaved: { type: Boolean, default: false },
   spinCount: { type: Number, default: 0 },
+  bonusSpins: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 
