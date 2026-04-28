@@ -305,16 +305,21 @@
     <div class="prize-ticker-wrap" id="prize-ticker-wrap" style="display:none">
       <div class="prize-ticker" id="prize-ticker"></div>
     </div>
-    <div class="card" style="padding:16px;">
+    <div class="card" style="padding:12px;">
       <div class="wheel-wrap">
         <div class="wheel-pointer"></div>
-        <canvas id="wheel-canvas" width="320" height="320"></canvas>
+        <canvas id="wheel-canvas" width="340" height="340"></canvas>
       </div>
     </div>
     <div class="spin-btn-wrap">
       <button id="spin-btn" onclick="doSpin()">🎡 סובב!</button>
     </div>
     <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px;">סיבוב אחד בכל 24 שעות · בהצלחה!</p>
+    <!-- Prize list: shows all available prizes clearly below the wheel -->
+    <div id="prizes-list" style="display:none;margin-top:14px;">
+      <div style="font-family:'Rubik',sans-serif;font-weight:700;font-size:14px;color:var(--accent2);margin-bottom:8px;text-align:center;">🎁 הפרסים שאפשר לזכות בהם:</div>
+      <div id="prizes-list-items" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
     <button class="btn btn-ghost" style="margin-top:14px;" onclick="logout()">↩ התנתקות</button>
   </div>
 
@@ -366,6 +371,9 @@ let isSpinning = false;
 let currentAngle = 0;
 let wheelBenefits = [];
 let timerInterval;
+
+// Redraw the wheel when the window is resized so it stays crisp
+window.addEventListener('resize', () => { drawWheel(); });
 
 function getGreeting(name) {
   const h = new Date().getHours();
@@ -629,11 +637,31 @@ function updateTicker() {
   const wrapEl = document.getElementById('prize-ticker-wrap');
   if (!tickerEl || !wrapEl || !wheelBenefits.length) return;
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  // Only allow safe CSS color values (hex, rgb, rgba, named colors – no expressions)
+  function safeColor(c) { return /^[a-zA-Z0-9#(),%. ]+$/.test(String(c)) ? c : '#7B5CF6'; }
   const items = wheelBenefits.map(b =>
-    `<span class="ticker-item"><span style="color:${esc(b.color || '#7B5CF6')}">●</span> ${esc(b.prizeText)}</span><span class="ticker-sep">✦</span>`
+    `<span class="ticker-item"><span style="color:${safeColor(b.color || '#7B5CF6')}">●</span> ${esc(b.prizeText)}</span><span class="ticker-sep">✦</span>`
   ).join('');
   tickerEl.innerHTML = items + items; // duplicate for seamless loop
   wrapEl.style.display = 'block';
+
+  // Populate the detailed prizes list below the wheel
+  const listEl = document.getElementById('prizes-list');
+  const itemsEl = document.getElementById('prizes-list-items');
+  if (!listEl || !itemsEl) return;
+  const meta = buildSegmentMeta(wheelBenefits);
+  itemsEl.innerHTML = wheelBenefits.map((b, i) => {
+    const color = safeColor((meta[i] && meta[i].color) || b.color || '#7B5CF6');
+    const icon = meta[i] ? meta[i].icon : '🎁';
+    return `<div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid rgba(255,255,255,0.07);border-right:3px solid ${color};border-radius:10px;padding:10px 12px;">
+      <span style="font-size:20px;flex-shrink:0;">${esc(icon)}</span>
+      <div style="min-width:0;">
+        <div style="font-family:'Rubik',sans-serif;font-size:13px;font-weight:700;color:#fff;line-height:1.3;">${esc(b.prizeText)}</div>
+        ${b.businessName ? `<div style="font-size:12px;color:var(--muted);margin-top:1px;">${esc(b.businessName)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  listEl.style.display = 'block';
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
@@ -675,23 +703,38 @@ function buildSegmentMeta(benefits) {
 function drawWheel() {
   const canvas = document.getElementById('wheel-canvas');
   const ctx = canvas.getContext('2d');
+  // Explicit LTR so Hebrew text aligns correctly inside rotated segments
+  ctx.direction = 'ltr';
   const dpr = window.devicePixelRatio || 1;
-  const cssSize = 320;
+  // Use the container width (up to 340px) so the wheel fills the card nicely
+  const containerW = Math.min(340, (canvas.parentElement ? canvas.parentElement.clientWidth - 16 : 320));
+  const cssSize = Math.max(280, containerW);
   canvas.width = cssSize * dpr;
   canvas.height = cssSize * dpr;
   canvas.style.width = cssSize + 'px';
   canvas.style.height = cssSize + 'px';
   ctx.scale(dpr, dpr);
 
-  const cx = cssSize / 2, cy = cssSize / 2, r = 148;
-  const segments = [...wheelBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
+  const cx = cssSize / 2, cy = cssSize / 2;
+  const r = cssSize / 2 - 12; // leave room for decorative dots
+
+  // When there are no active benefits yet, show placeholder segments so the
+  // wheel looks like a real wheel (not an empty dark circle).
+  const activeBenefits = wheelBenefits.length > 0 ? wheelBenefits : [
+    { prizeText: 'פרס 1', color: '#7B5CF6' },
+    { prizeText: 'פרס 2', color: '#E85D04' },
+    { prizeText: 'פרס 3', color: '#00BBF9' },
+    { prizeText: 'פרס 4', color: '#F15BB5' },
+    { prizeText: 'פרס 5', color: '#22C55E' },
+  ];
+  const segments = [...activeBenefits, { prizeText: 'נסה שוב 😅', color: '#2D2D4E' }];
   const n = segments.length;
   const slice = (Math.PI * 2) / n;
-  const meta = buildSegmentMeta(wheelBenefits);
+  const meta = buildSegmentMeta(activeBenefits);
 
   ctx.clearRect(0, 0, cssSize, cssSize);
 
-  // Draw outer shadow ring
+  // Outer shadow ring
   ctx.beginPath();
   ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
   ctx.strokeStyle = 'rgba(0,0,0,0.4)';
@@ -707,7 +750,7 @@ function drawWheel() {
     const gradMidX = cx + Math.cos(a0 + slice / 2) * r * 0.6;
     const gradMidY = cy + Math.sin(a0 + slice / 2) * r * 0.6;
     const grad = ctx.createRadialGradient(gradMidX, gradMidY, 0, cx, cy, r);
-    grad.addColorStop(0, lightenColor(segColor, 30));
+    grad.addColorStop(0, lightenColor(segColor, 35));
     grad.addColorStop(1, segColor);
 
     ctx.beginPath();
@@ -716,50 +759,63 @@ function drawWheel() {
     ctx.closePath();
     ctx.fillStyle = grad;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Text in segment
+    // ── Text inside segment ──────────────────────────────────────
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(a0 + slice / 2);
+    // After rotation, +x points radially outward toward the segment.
+    // textAlign='right' anchors text at its physical right edge (= outer side),
+    // so text extends inward (toward center) – always readable.
+    ctx.direction = 'ltr';
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#fff';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 4;
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
 
-    const maxLen = n > 8 ? 7 : 10;
-    const icon = isLoss ? '😅' : (meta[i] ? meta[i].icon : '🎁');
-    const iconSize = n > 8 ? 11 : 14;
+    // Font sizes: scale with both canvas size and segment count
+    const bigSeg = n <= 6;
+    const iconSize = bigSeg ? 15 : (n <= 9 ? 12 : 10);
+    const bizFontSize = bigSeg ? 13 : (n <= 9 ? 11 : 9);
+    const prizeFontSize = bigSeg ? 12 : (n <= 9 ? 10 : 9);
+    // Max chars per line (more generous than before)
+    const maxLen = bigSeg ? 12 : (n <= 9 ? 9 : 7);
 
+    // Icon near outer edge (no shadow so emoji renders cleanly)
     ctx.shadowBlur = 0;
     ctx.font = `${iconSize}px sans-serif`;
-    ctx.fillText(icon, r - 5, 5);
+    const icon = isLoss ? '😅' : (meta[i] ? meta[i].icon : '🎁');
+    ctx.fillText(icon, r - 6, 0);
+
+    // Text label(s) inward from icon
+    const textOuterEdge = r - iconSize - 8;
     ctx.shadowBlur = 4;
 
-    const textX = r - (n > 8 ? 21 : 26);
-
     if (!isLoss && seg.businessName) {
+      // Two lines: business name + prize text
       const biz = seg.businessName.length > maxLen ? seg.businessName.slice(0, maxLen) + '…' : seg.businessName;
       const prize = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen) + '…' : seg.prizeText;
-      ctx.font = `bold ${n > 8 ? 10 : 12}px 'Assistant', sans-serif`;
+      const lineGap = bizFontSize + 3;
+      ctx.font = `bold ${bizFontSize}px 'Assistant', sans-serif`;
       ctx.fillStyle = '#fff';
-      ctx.fillText(biz, textX, -5);
-      ctx.font = `${n > 8 ? 9 : 11}px 'Assistant', sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
-      ctx.fillText(prize, textX, 7);
+      ctx.fillText(biz, textOuterEdge, -(lineGap / 2));
+      ctx.font = `${prizeFontSize}px 'Assistant', sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fillText(prize, textOuterEdge, (lineGap / 2) + 1);
     } else {
-      ctx.font = `bold ${n > 8 ? 10 : 12}px 'Assistant', sans-serif`;
-      ctx.fillStyle = '#fff';
+      // Single centred label
       const label = seg.prizeText.length > maxLen ? seg.prizeText.slice(0, maxLen) + '…' : seg.prizeText;
-      ctx.fillText(label, textX, 4);
+      ctx.font = `bold ${bizFontSize}px 'Assistant', sans-serif`;
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label, textOuterEdge, 0);
     }
 
     ctx.restore();
   });
 
-  // Decorative outer ring with gold glow
+  // Gold outer ring
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.strokeStyle = '#F5C842';
@@ -769,8 +825,8 @@ function drawWheel() {
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  // Decorative dot markers on the ring
-  const dotCount = Math.min(n * 2, 24);
+  // Decorative dot markers
+  const dotCount = Math.min(n * 2, 28);
   for (let d = 0; d < dotCount; d++) {
     const angle = (Math.PI * 2 / dotCount) * d + currentAngle;
     const dx = cx + Math.cos(angle) * (r + 10);
@@ -781,12 +837,13 @@ function drawWheel() {
     ctx.fill();
   }
 
-  // Center circle hub
-  const hubGrad = ctx.createRadialGradient(cx - 6, cy - 6, 2, cx, cy, 26);
+  // Center hub
+  const hubR = Math.max(22, r * 0.16);
+  const hubGrad = ctx.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, hubR);
   hubGrad.addColorStop(0, '#2A1E6E');
   hubGrad.addColorStop(1, '#0D0D1A');
   ctx.beginPath();
-  ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+  ctx.arc(cx, cy, hubR, 0, Math.PI * 2);
   ctx.fillStyle = hubGrad;
   ctx.fill();
   ctx.strokeStyle = '#F5C842';
@@ -795,7 +852,7 @@ function drawWheel() {
   ctx.shadowBlur = 8;
   ctx.stroke();
   ctx.shadowBlur = 0;
-  ctx.font = 'bold 18px sans-serif';
+  ctx.font = `bold ${Math.round(hubR * 0.9)}px sans-serif`;
   ctx.fillStyle = '#F5C842';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

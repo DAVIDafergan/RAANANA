@@ -424,6 +424,19 @@ app.put('/api/admin/benefits/:id', adminAuth, adminLimiter, async (req, res) => 
       const biz = await Business.findById(data.businessId);
       if (biz) { data.businessName = biz.name; data.logoUrl = biz.logoUrl; }
     }
+    // When totalStock is updated, adjust remainingStock by the same delta so restocked
+    // benefits (remainingStock was 0) become visible on the wheel again.
+    if (data.totalStock !== undefined) {
+      const newTotal = Number(data.totalStock);
+      if (!Number.isFinite(newTotal) || newTotal < 0) {
+        return res.status(400).json({ error: 'totalStock חייב להיות מספר חיובי' });
+      }
+      const existing = await Benefit.findById(req.params.id);
+      if (existing) {
+        const delta = newTotal - existing.totalStock;
+        data.remainingStock = Math.max(0, existing.remainingStock + delta);
+      }
+    }
     const benefit = await Benefit.findByIdAndUpdate(req.params.id, data, { new: true });
     res.json(benefit);
   } catch (err) {
