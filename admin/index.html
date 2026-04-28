@@ -180,6 +180,11 @@
           <button class="btn btn-accent" onclick="openBenefitModal()">+ הוסף הטבה</button>
         </div>
       </div>
+      <!-- Quick Stock Overview -->
+      <div id="stock-overview" style="margin-bottom:18px;display:none;">
+        <div style="font-family:'Rubik',sans-serif;font-weight:700;font-size:14px;color:var(--gold);margin-bottom:10px;">📦 סקירת מלאי מהירה</div>
+        <div id="stock-overview-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;"></div>
+      </div>
       <div class="card">
         <table>
           <thead><tr>
@@ -360,6 +365,15 @@ let adminKey = '';
 const API = '/api';
 let allBusinesses = [];
 
+// Safe logo error handler – replaces failed img with a placeholder span
+function handleLogoError(img) {
+  img.style.display = 'none';
+  const span = document.createElement('span');
+  span.className = 'biz-logo-placeholder';
+  span.textContent = '🏢';
+  if (img.parentNode) img.parentNode.insertBefore(span, img.nextSibling);
+}
+
 function doLogin() {
   const k = document.getElementById('admin-key-input').value.trim();
   if (!k) return;
@@ -485,7 +499,9 @@ async function loadBusinesses() {
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   tbody.innerHTML = allBusinesses.map(b => `
     <tr>
-      <td>${b.logoUrl ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.name)}" onerror="this.style.display='none'">` : `<span class="biz-logo-placeholder">🏢</span>`}</td>
+      <td>${b.logoUrl
+        ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.name)}" onerror="handleLogoError(this)">`
+        : `<span class="biz-logo-placeholder">🏢</span>`}</td>
       <td style="font-weight:600">${esc(b.name)}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-accent" style="padding:5px 10px;font-size:12px" onclick="showPage('benefits','${esc(b._id)}')">🎁 הטבות</button>
@@ -604,14 +620,21 @@ async function loadBenefits() {
   const filterBiz = document.getElementById('benefits-biz-filter')?.value;
   if (filterBiz) data = data.filter(b => b.businessId === filterBiz || String(b.businessId) === filterBiz);
   const tbody = document.getElementById('benefits-tbody');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">אין הטבות</td></tr>'; return; }
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">אין הטבות</td></tr>';
+    updateStockOverview([]);
+    return;
+  }
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   tbody.innerHTML = data.map(b => {
     const stockClass = b.remainingStock === 0 ? 'empty' : b.remainingStock <= 5 ? 'low' : '';
+    const logoHtml = b.logoUrl
+      ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.businessName)}" style="width:28px;height:28px;" onerror="handleLogoError(this)">`
+      : '<span style="font-size:18px;">🏢</span>';
     return `
     <tr data-benefit-id="${esc(b._id)}">
       <td>
-        ${b.logoUrl ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.businessName)}" style="width:28px;height:28px;" onerror="this.style.display='none'">` : ''}
+        ${logoHtml}
         <span class="color-dot" style="background:${esc(b.color || '#7B5CF6')}"></span>${esc(b.businessName)}
       </td>
       <td>${esc(b.prizeText)}</td>
@@ -641,6 +664,33 @@ async function loadBenefits() {
     row.querySelector('.btn-edit-benefit').addEventListener('click', () => openBenefitModal(ben));
     row.querySelector('.btn-delete-benefit').addEventListener('click', () => deleteBenefit(id));
   });
+
+  updateStockOverview(data);
+}
+
+function updateStockOverview(data) {
+  const grid = document.getElementById('stock-overview-grid');
+  const panel = document.getElementById('stock-overview');
+  if (!grid || !panel) return;
+  if (!data.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  grid.innerHTML = data.map(b => {
+    const pct = b.totalStock > 0 ? Math.round((b.remainingStock / b.totalStock) * 100) : 0;
+    const barColor = b.remainingStock === 0 ? '#EF4444' : b.remainingStock <= 5 ? '#F59E0B' : '#22C55E';
+    const statusEmoji = b.remainingStock === 0 ? '❌' : b.remainingStock <= 5 ? '⚠️' : '✅';
+    return `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <span style="font-size:12px;font-weight:700;color:#fff;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(b.prizeText)}</span>
+        <span style="font-size:14px;">${statusEmoji}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${esc(b.businessName)}</div>
+      <div style="background:rgba(255,255,255,0.08);border-radius:4px;height:5px;overflow:hidden;margin-bottom:5px;">
+        <div style="width:${pct}%;height:100%;background:${barColor};transition:width 0.4s;border-radius:4px;"></div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:${barColor};">${b.remainingStock} <span style="color:var(--muted);font-weight:400;">/ ${b.totalStock}</span></div>
+    </div>`;
+  }).join('');
 }
 
 function openBenefitModal(b, prefillBizId) {

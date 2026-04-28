@@ -25,7 +25,9 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Assistant', sans-serif;
-    background: var(--bg);
+    background: linear-gradient(-45deg, #0a0a1a, #0d0d2e, #120d28, #0a1022, #0e0a1f);
+    background-size: 400% 400%;
+    animation: gradient-shift 22s ease infinite;
     color: var(--text);
     min-height: 100dvh;
     display: flex;
@@ -33,39 +35,151 @@
     align-items: center;
     overflow-x: hidden;
   }
+  @keyframes gradient-shift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
   body::before {
     content: '';
     position: fixed; inset: 0;
     background-image:
-      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
-      radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 45% 80%, rgba(255,255,255,0.35) 0%, transparent 100%),
-      radial-gradient(1px 1px at 85% 60%, rgba(255,255,255,0.25) 0%, transparent 100%),
-      radial-gradient(2px 2px at 55% 45%, rgba(245,200,66,0.2) 0%, transparent 100%);
+      radial-gradient(1px 1px at 8%  12%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 22% 48%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 38% 22%, rgba(255,255,255,0.65) 0%, transparent 100%),
+      radial-gradient(1px 1px at 53% 73%, rgba(255,255,255,0.55) 0%, transparent 100%),
+      radial-gradient(1px 1px at 67% 38%, rgba(255,255,255,0.45) 0%, transparent 100%),
+      radial-gradient(2px 2px at 78% 18%, rgba(245,200,66,0.45) 0%, transparent 100%),
+      radial-gradient(1px 1px at 88% 58%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 14% 82%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(2px 2px at 62% 88%, rgba(123,92,246,0.55) 0%, transparent 100%),
+      radial-gradient(1px 1px at 33% 65%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 48%  5%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 92% 82%, rgba(245,200,66,0.35) 0%, transparent 100%);
     pointer-events: none;
     z-index: 0;
+    animation: twinkle 5s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle {
+    0%   { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+  /* Floating background particles */
+  .bg-particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 0;
+    animation: float-up linear infinite;
+    user-select: none;
+  }
+  @keyframes float-up {
+    0%   { transform: translateY(110vh) rotate(0deg) scale(0.8); opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 0.4; }
+    100% { transform: translateY(-10vh) rotate(360deg) scale(1.1); opacity: 0; }
+  }
+  /* Aurora orbs */
+  .bg-orb {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(80px);
+    animation: orb-drift ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  @keyframes orb-drift {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(50px, -60px) scale(1.25); }
   }
   .container { width: 100%; max-width: 480px; padding: 24px 20px; position: relative; z-index: 1; }
-  .header { text-align: center; margin-bottom: 28px; }
+  .header { text-align: center; margin-bottom: 28px; position: relative; }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -12px; left: 50%;
+    transform: translateX(-50%);
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    animation: divider-anim 2.5s ease-in-out infinite;
+  }
+  @keyframes divider-anim {
+    0%,100% { opacity: 0.35; width: 60px; }
+    50%     { opacity: 1;    width: 120px; }
+  }
   .logo-badge {
     display: inline-flex; align-items: center; gap: 8px;
     background: linear-gradient(135deg, var(--accent), #5A3FC0);
-    border-radius: 40px; padding: 6px 16px;
+    border-radius: 40px; padding: 6px 18px;
     font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 13px; color: #fff;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 24px rgba(123,92,246,0.45);
+    animation: badge-float 3.5s ease-in-out infinite alternate;
+  }
+  @keyframes badge-float {
+    0%   { transform: translateY(0);   box-shadow: 0 4px 20px rgba(123,92,246,0.4); }
+    100% { transform: translateY(-5px); box-shadow: 0 8px 32px rgba(123,92,246,0.65); }
   }
   .header h1 {
     font-family: 'Rubik', sans-serif; font-size: 36px; font-weight: 900;
-    color: var(--gold); text-shadow: 0 0 40px rgba(245,200,66,0.3); line-height: 1.1;
+    background: linear-gradient(135deg, #F5C842, #FFE57A, #F5C842, #C9952A, #FFE57A);
+    background-size: 300% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gold-text-flow 4s linear infinite;
+    line-height: 1.1;
   }
-  .header p { color: var(--muted); font-size: 15px; margin-top: 6px; }
+  @keyframes gold-text-flow {
+    0%   { background-position: 0% center; }
+    100% { background-position: 300% center; }
+  }
+  @supports not (-webkit-background-clip: text) {
+    .header h1 { color: var(--gold); -webkit-text-fill-color: unset; }
+  }
+  .header p { color: var(--muted); font-size: 15px; margin-top: 8px; }
   .screen { display: none; }
-  .screen.active { display: block; }
-  .card {
-    background: var(--card);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+  .screen.active {
+    display: block;
+    animation: screen-enter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
+  @keyframes screen-enter {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+  }
+  /* After-effects entrance animations */
+  .ae-fade-up {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1);
+  }
+  .ae-fade-up.visible { opacity: 1; transform: translateY(0); }
+  .ae-fade-in {
+    opacity: 0;
+    transition: opacity 0.7s ease;
+  }
+  .ae-fade-in.visible { opacity: 1; }
+  .ae-scale-in {
+    opacity: 0;
+    transform: scale(0.88);
+    transition: opacity 0.55s cubic-bezier(0.34,1.56,0.64,1), transform 0.55s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .ae-scale-in.visible { opacity: 1; transform: scale(1); }
+  .float-ambient { animation: float-ambient ease-in-out infinite alternate; }
+  @keyframes float-ambient {
+    0%   { transform: translateY(0px) rotate(0deg); }
+    100% { transform: translateY(-10px) rotate(3deg); }
+  }
+  .card {
+    background: rgba(22, 22, 42, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: box-shadow 0.3s;
+  }
+  .card:hover { box-shadow: 0 12px 55px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.09); }
   .card h2 { font-family: 'Rubik', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
   .card .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
   label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
@@ -80,18 +194,38 @@
   input::placeholder { color: var(--muted); }
   .otp-input { letter-spacing: 8px; text-align: center; font-size: 28px; font-weight: 700; direction: ltr; }
   .btn {
-    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    width: 100%; padding: 14px; border-radius: 14px; border: none;
     font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 700;
-    cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+    cursor: pointer; transition: all 0.25s; position: relative; overflow: hidden;
   }
-  .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #1A1000; }
-  .btn-gold:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark), var(--gold));
+    background-size: 200% auto;
+    color: #1A1000;
+    box-shadow: 0 4px 22px rgba(245,200,66,0.3);
+  }
+  .btn-gold::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -120%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent);
+    animation: shimmer 3.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes shimmer {
+    0%  { left: -120%; }
+    40% { left: 150%;  }
+    100%{ left: 150%;  }
+  }
+  .btn-gold:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 34px rgba(245,200,66,0.55); }
   .btn-gold:active { transform: translateY(0); }
   .btn-ghost {
-    background: transparent; color: var(--accent2);
-    border: 1px solid rgba(123,92,246,0.35); margin-top: 8px;
+    background: rgba(123,92,246,0.07); color: var(--accent2);
+    border: 1px solid rgba(123,92,246,0.3); margin-top: 8px;
+    backdrop-filter: blur(10px);
   }
-  .btn-ghost:hover { background: rgba(123,92,246,0.08); }
+  .btn-ghost:hover { background: rgba(123,92,246,0.15); border-color: rgba(123,92,246,0.5); transform: translateY(-1px); }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
   .contact-step {
     display: flex; align-items: center; gap: 14px;
@@ -107,49 +241,104 @@
   .contact-step h3 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
   .contact-step p { font-size: 13px; color: var(--muted); }
   .wheel-wrap { position: relative; display: flex; justify-content: center; margin: 10px 0; }
-  #wheel-canvas { border-radius: 50%; filter: drop-shadow(0 0 24px rgba(245,200,66,0.25)); }
+  #wheel-canvas { border-radius: 50%; animation: wheel-glow 3s ease-in-out infinite alternate; }
+  @keyframes wheel-glow {
+    0%   { filter: drop-shadow(0 0 18px rgba(245,200,66,0.22)); }
+    100% { filter: drop-shadow(0 0 42px rgba(245,200,66,0.65)); }
+  }
   .wheel-pointer {
     position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
     width: 0; height: 0;
     border-left: 13px solid transparent; border-right: 13px solid transparent;
     border-top: 26px solid var(--gold); z-index: 10;
-    filter: drop-shadow(0 2px 6px rgba(245,200,66,0.5));
+    animation: pointer-glow 1.5s ease-in-out infinite alternate;
+    filter: drop-shadow(0 2px 6px rgba(245,200,66,0.6));
+  }
+  @keyframes pointer-glow {
+    0%   { filter: drop-shadow(0 2px 6px rgba(245,200,66,0.6)); }
+    100% { filter: drop-shadow(0 3px 18px rgba(245,200,66,1)); }
   }
   .spin-btn-wrap { text-align: center; margin-top: 20px; }
   #spin-btn {
     width: auto; padding: 16px 52px; font-size: 19px; border-radius: 50px;
-    background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #1A1000;
-    border: none; font-family: 'Rubik', sans-serif; font-weight: 900;
-    cursor: pointer; transition: all 0.2s;
-    box-shadow: 0 4px 24px rgba(245,200,66,0.35);
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark), var(--gold));
+    background-size: 200% auto;
+    color: #1A1000; border: none;
+    font-family: 'Rubik', sans-serif; font-weight: 900;
+    cursor: pointer; transition: all 0.25s;
+    animation: spin-btn-pulse 2.5s ease-in-out infinite;
+    position: relative; overflow: hidden;
   }
-  #spin-btn:hover { transform: scale(1.05); box-shadow: 0 6px 32px rgba(245,200,66,0.5); }
-  #spin-btn:disabled { opacity: 0.4; transform: none; cursor: not-allowed; }
+  #spin-btn::after {
+    content: '';
+    position: absolute; top: 0; left: -120%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.42), transparent);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+  @keyframes spin-btn-pulse {
+    0%,100% { box-shadow: 0 4px 28px rgba(245,200,66,0.38); }
+    50%      { box-shadow: 0 6px 52px rgba(245,200,66,0.75), 0 0 0 8px rgba(245,200,66,0.1); }
+  }
+  #spin-btn:hover { transform: scale(1.06); box-shadow: 0 8px 44px rgba(245,200,66,0.65); }
+  #spin-btn:disabled { opacity: 0.4; transform: none; cursor: not-allowed; animation: none; }
   .result-card { text-align: center; padding: 32px 24px; }
-  .win-icon { font-size: 68px; margin-bottom: 12px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+  .win-icon { font-size: 68px; margin-bottom: 12px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1), icon-float 3s ease-in-out 0.5s infinite alternate; }
   @keyframes pop { 0% { transform: scale(0) rotate(-15deg); } 100% { transform: scale(1) rotate(0); } }
+  @keyframes icon-float {
+    0%   { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-8px) scale(1.05); }
+  }
   .prize-business { font-size: 14px; color: var(--muted); margin-bottom: 4px; }
-  .prize-name { font-family: 'Rubik', sans-serif; font-size: 26px; font-weight: 900; color: var(--gold); margin-bottom: 20px; }
+  .prize-name {
+    font-family: 'Rubik', sans-serif; font-size: 26px; font-weight: 900;
+    background: linear-gradient(135deg, var(--gold), #FFE066, var(--gold));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gold-text-flow 3s linear infinite;
+    margin-bottom: 20px;
+  }
+  @supports not (-webkit-background-clip: text) {
+    .prize-name { color: var(--gold); -webkit-text-fill-color: unset; }
+  }
   .prize-logo {
     width: 80px; height: 80px; object-fit: contain; border-radius: 16px;
-    background: var(--card2); border: 2px solid rgba(255,255,255,0.1);
-    margin-bottom: 12px; display: none;
+    background: var(--card2); border: 2px solid rgba(245,200,66,0.4);
+    margin: 0 auto 12px; display: none; padding: 6px;
+    box-shadow: 0 4px 22px rgba(245,200,66,0.2);
   }
   .vip-card {
-    background: linear-gradient(135deg, #1A1200, #2A1E00);
+    background: linear-gradient(135deg, rgba(26,18,0,0.88), rgba(42,30,0,0.88));
+    backdrop-filter: blur(12px);
     border: 2px solid var(--gold); border-radius: 14px;
     padding: 22px; margin: 16px 0;
+    position: relative; overflow: hidden;
     animation: glow-pulse 1.8s ease-in-out infinite;
+  }
+  .vip-card::before {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(245,200,66,0.09), transparent);
+    animation: vip-scan 3.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes vip-scan {
+    0%  { left: -100%; }
+    50% { left:  100%; }
+    100%{ left:  100%; }
   }
   @keyframes glow-pulse {
     0%,100% { box-shadow: 0 0 10px rgba(245,200,66,0.2); border-color: #C9952A; }
-    50% { box-shadow: 0 0 35px rgba(245,200,66,0.65); border-color: #FFE066; }
+    50% { box-shadow: 0 0 48px rgba(245,200,66,0.75); border-color: #FFE066; }
   }
   .vip-label { font-size: 11px; color: #8B7A2A; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
   .vip-code { font-family: 'Rubik', sans-serif; font-size: 32px; font-weight: 900; letter-spacing: 5px; color: var(--gold); }
   .vip-expires { font-size: 13px; color: var(--muted); margin-top: 10px; }
   .timer { color: var(--danger); font-weight: 700; font-family: 'Rubik', sans-serif; }
-  .loss-emoji { font-size: 60px; margin-bottom: 12px; }
+  .loss-emoji { font-size: 60px; margin-bottom: 12px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
   .loss-msg { font-family: 'Rubik', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
   .loss-sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
   .next-spin-box {
@@ -158,10 +347,20 @@
   }
   .next-spin-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
   .next-spin-timer { font-family: 'Rubik', sans-serif; font-size: 28px; font-weight: 700; color: var(--accent2); }
-  .steps { display: flex; justify-content: center; gap: 6px; margin-bottom: 24px; }
-  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.12); transition: all 0.3s; }
-  .step-dot.active { background: var(--gold); width: 24px; border-radius: 4px; }
-  .step-dot.done { background: var(--success); }
+  .steps {
+    display: flex; justify-content: center; gap: 7px; margin-bottom: 24px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px; padding: 8px 16px;
+    width: fit-content; margin-left: auto; margin-right: auto;
+  }
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .step-dot.active { background: var(--gold); width: 26px; border-radius: 4px; box-shadow: 0 0 10px rgba(245,200,66,0.6); }
+  .step-dot.done   { background: var(--success); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
   .confetti-piece {
     position: fixed; width: 8px; height: 8px; border-radius: 2px;
     pointer-events: none; animation: fall 2.5s ease-in forwards; z-index: 100;
@@ -173,6 +372,11 @@
   .warning-banner {
     background: rgba(239,68,68,0.12); border: 1.5px solid var(--danger);
     border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; text-align: center;
+    animation: warning-glow 2.5s ease-in-out infinite;
+  }
+  @keyframes warning-glow {
+    0%,100% { border-color: rgba(239,68,68,0.4); }
+    50%     { border-color: rgba(239,68,68,0.9); box-shadow: 0 0 16px rgba(239,68,68,0.15); }
   }
   .warning-banner strong-title {
     display: block; font-family: 'Rubik', sans-serif; font-weight: 700;
@@ -189,8 +393,8 @@
   .prize-ticker-wrap::before, .prize-ticker-wrap::after {
     content: ''; position: absolute; top: 0; bottom: 0; width: 28px; z-index: 2; pointer-events: none;
   }
-  .prize-ticker-wrap::before { left: 0; background: linear-gradient(to right, var(--card), transparent); }
-  .prize-ticker-wrap::after  { right: 0; background: linear-gradient(to left,  var(--card), transparent); }
+  .prize-ticker-wrap::before { left: 0; background: linear-gradient(to right, rgba(22,22,42,0.95), transparent); }
+  .prize-ticker-wrap::after  { right: 0; background: linear-gradient(to left, rgba(22,22,42,0.95), transparent); }
   .prize-ticker { display: flex; white-space: nowrap; animation: tickerScroll 8s linear infinite; }
   @keyframes tickerScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
   .ticker-item {
@@ -199,17 +403,33 @@
     color: var(--gold); padding: 0 18px;
   }
   .ticker-sep { color: var(--accent2); padding: 0 4px; }
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(18px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0)    scale(1);    }
-  }
-  .screen.active { animation: slideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
   @keyframes btnPop {
     0%   { transform: scale(1); }
     40%  { transform: scale(0.96); }
     100% { transform: scale(1); }
   }
   .btn:active { animation: btnPop 0.18s ease; }
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    body { animation: none; }
+    body::before { animation: none; }
+    .bg-orb, .bg-particle { animation: none; display: none; }
+    .logo-badge { animation: none; }
+    .header h1 { animation: none; background-position: 0% center; }
+    .header::after { animation: none; opacity: 0.6; width: 80px; }
+    .screen.active { animation: none; }
+    .btn-gold::after, #spin-btn::after { animation: none; display: none; }
+    #wheel-canvas { animation: none; filter: drop-shadow(0 0 18px rgba(245,200,66,0.3)); }
+    .wheel-pointer { animation: none; }
+    #spin-btn { animation: none; }
+    .warning-banner { animation: none; }
+    .vip-card { animation: none; }
+    .vip-card::before { animation: none; display: none; }
+    .win-icon { animation: none; }
+    .prize-name { animation: none; background-position: 0% center; }
+    .ae-fade-up, .ae-fade-in, .ae-scale-in { opacity: 1; transform: none; transition: none; }
+    .float-ambient { animation: none; }
+  }
 </style>
   <!-- Firebase SDK (compat – works with plain JS without bundler) -->
   <script src="/firebase-env.js"></script>
@@ -217,11 +437,16 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 </head>
 <body>
+<!-- Aurora orbs -->
+<div class="bg-orb" style="width:550px;height:550px;background:rgba(123,92,246,0.18);top:-160px;left:-200px;animation-duration:13s;"></div>
+<div class="bg-orb" style="width:420px;height:420px;background:rgba(245,200,66,0.11);bottom:-100px;right:-160px;animation-duration:16s;animation-delay:3s;"></div>
+<div class="bg-orb" style="width:300px;height:300px;background:rgba(34,197,94,0.09);top:38%;left:-110px;animation-duration:11s;animation-delay:5s;"></div>
+<div class="bg-orb" style="width:350px;height:350px;background:rgba(0,187,249,0.08);top:55%;right:-130px;animation-duration:18s;animation-delay:2s;"></div>
 <div class="container">
   <div class="header">
-    <div class="logo-badge">🎡 רעננה</div>
-    <h1>גלגל המזל</h1>
-    <p>סובב כל יום וזכה בפרסים אמיתיים בעיר</p>
+    <div class="logo-badge ae-fade-in" style="transition-delay:0.05s">🎡 רעננה</div>
+    <h1 class="ae-fade-up" style="transition-delay:0.15s">גלגל המזל</h1>
+    <p class="ae-fade-up" style="transition-delay:0.28s">סובב כל יום וזכה בפרסים אמיתיים בעיר</p>
   </div>
 
   <div class="steps" id="steps-indicator">
@@ -234,12 +459,12 @@
   <!-- SCREEN 0: Login (returning users – phone only) -->
   <div class="screen active" id="screen-login">
     <div class="card">
-      <h2>ברוכים הבאים! 👋</h2>
-      <div class="sub">הזן מספר טלפון כדי להיכנס לגלגל</div>
+      <h2 class="ae-fade-up" style="transition-delay:0.05s">ברוכים הבאים! 👋</h2>
+      <div class="sub ae-fade-up" style="transition-delay:0.12s">הזן מספר טלפון כדי להיכנס לגלגל</div>
       <label>מספר טלפון</label>
       <input type="tel" id="login-phone" placeholder="0501234567" autocomplete="tel" dir="ltr">
       <div id="login-error" class="error-msg" style="display:none"></div>
-      <button class="btn btn-gold" id="login-btn" onclick="loginWithPhone()">כניסה →</button>
+      <button class="btn btn-gold ae-scale-in" style="transition-delay:0.18s" id="login-btn" onclick="loginWithPhone()">כניסה →</button>
       <button class="btn btn-ghost" style="margin-top:10px;" onclick="goToRegister()">🆕 משחק בפעם הראשונה? הירשם כאן</button>
     </div>
   </div>
@@ -247,8 +472,8 @@
   <!-- SCREEN 1: Register (new users) -->
   <div class="screen" id="screen-register">
     <div class="card">
-      <h2>הרשמה ראשונה! 🎉</h2>
-      <div class="sub">מלא שם ומספר טלפון כדי להתחיל לשחק</div>
+      <h2 class="ae-fade-up" style="transition-delay:0.05s">הרשמה ראשונה! 🎉</h2>
+      <div class="sub ae-fade-up" style="transition-delay:0.12s">מלא שם ומספר טלפון כדי להתחיל לשחק</div>
       <label>שם מלא</label>
       <input type="text" id="reg-name" placeholder="ישראל ישראלי" autocomplete="name">
       <label>מספר טלפון</label>
@@ -319,11 +544,6 @@
       <button id="spin-btn" onclick="doSpin()">🎡 סובב!</button>
     </div>
     <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px;">סיבוב אחד בכל 24 שעות · בהצלחה!</p>
-    <!-- Prize list: shows all available prizes clearly below the wheel -->
-    <div id="prizes-list" style="display:none;margin-top:14px;">
-      <div style="font-family:'Rubik',sans-serif;font-weight:700;font-size:14px;color:var(--accent2);margin-bottom:8px;text-align:center;">🎁 הפרסים שאפשר לזכות בהם:</div>
-      <div id="prizes-list-items" style="display:flex;flex-direction:column;gap:6px;"></div>
-    </div>
     <button class="btn btn-ghost" style="margin-top:14px;" onclick="logout()">↩ התנתקות</button>
   </div>
 
@@ -331,16 +551,16 @@
   <div class="screen" id="screen-win">
     <div class="card result-card">
       <div class="win-icon">🎉</div>
-      <div id="win-personal" style="font-family:'Rubik',sans-serif;font-weight:700;font-size:17px;color:var(--gold);margin-bottom:8px;"></div>
-      <img id="win-logo" class="prize-logo" src="" alt="">
-      <p class="prize-business" id="win-business"></p>
-      <p class="prize-name" id="win-prize"></p>
-      <div class="vip-card">
+      <div id="win-personal" style="font-family:'Rubik',sans-serif;font-weight:700;font-size:17px;color:var(--gold);margin-bottom:8px;" class="ae-fade-up" style="transition-delay:0.05s"></div>
+      <img id="win-logo" class="prize-logo ae-scale-in" src="" alt="" style="transition-delay:0.1s">
+      <p class="prize-business ae-fade-up" id="win-business" style="transition-delay:0.15s"></p>
+      <p class="prize-name ae-fade-up" id="win-prize" style="transition-delay:0.22s"></p>
+      <div class="vip-card ae-scale-in" style="transition-delay:0.3s">
         <div class="vip-label">הצג קוד זה בעסק</div>
         <div class="vip-code" id="win-code"></div>
         <div class="vip-expires">תוקף: <span class="timer" id="win-timer">02:00:00</span></div>
       </div>
-      <p style="font-size:13px;color:var(--muted);line-height:1.6;">הראה את הקוד המהבהב לצוות בעסק כדי לממש את הפרס שלך. שים לב לתוקף!</p>
+      <p class="ae-fade-up" style="font-size:13px;color:var(--muted);line-height:1.6;transition-delay:0.38s">הראה את הקוד המהבהב לצוות בעסק כדי לממש את הפרס שלך. שים לב לתוקף!</p>
       <button class="btn btn-ghost" style="margin-top:16px;" onclick="logout()">↩ התנתקות</button>
     </div>
   </div>
@@ -348,10 +568,10 @@
   <!-- SCREEN 6: Loss -->
   <div class="screen" id="screen-loss">
     <div class="card result-card">
-      <div class="loss-emoji">😅</div>
-      <div class="loss-msg">הפעם לא, חבר!</div>
-      <div class="loss-sub">אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב</div>
-      <div class="next-spin-box">
+      <div class="loss-emoji float-ambient" style="animation-duration:2.8s">😅</div>
+      <div class="loss-msg ae-fade-up" style="transition-delay:0.1s">הפעם לא, חבר!</div>
+      <div class="loss-sub ae-fade-up" style="transition-delay:0.2s">אבל הגלגל לא שוכח אותך —<br>מחר יש לך עוד סיבוב</div>
+      <div class="next-spin-box ae-scale-in" style="transition-delay:0.3s">
         <div class="next-spin-label">הסיבוב הבא עוד</div>
         <div class="next-spin-timer" id="next-spin-timer">24:00:00</div>
       </div>
@@ -361,6 +581,28 @@
 </div>
 
 <div style="text-align:center;margin-top:8px;padding-bottom:16px;position:relative;z-index:1;">
+  <a href="https://wa.me/972556674329?text=%D7%94%D7%99%D7%99%2C%20%D7%90%D7%A0%D7%99%20%D7%91%D7%A2%D7%9C%20%D7%A2%D7%A1%D7%A7%20%D7%95%D7%90%D7%A9%D7%9E%D7%97%20%D7%9C%D7%94%D7%A6%D7%98%D7%A8%D7%A3%20%D7%9C%D7%92%D7%9C%D7%92%D7%9C%20%D7%94%D7%94%D7%98%D7%91%D7%95%D7%AA%20%D7%A9%D7%9C%20%D7%A8%D7%A2%D7%A0%D7%A0%D7%94%21" target="_blank" rel="noopener" style="text-decoration:none;display:block;margin:0 auto 12px;max-width:340px;">
+    <button class="btn" style="
+      width:100%;
+      background:linear-gradient(135deg,#25D366,#128C7E);
+      color:#fff;
+      font-family:'Rubik',sans-serif;
+      font-size:16px;
+      font-weight:700;
+      border-radius:50px;
+      padding:15px 24px;
+      border:none;
+      cursor:pointer;
+      box-shadow:0 4px 22px rgba(37,211,102,0.4);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    ">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0"><path d="M16 2.67A13.33 13.33 0 0 0 4.02 21.03L2.67 29.33l8.5-1.32A13.33 13.33 0 1 0 16 2.67Zm0 24A10.62 10.62 0 0 1 9.94 24.7l-.42-.27-5.04.79.84-4.9-.29-.44A10.66 10.66 0 1 1 16 26.67ZM22.4 19.2c-.32-.16-1.9-.93-2.2-1.04-.29-.1-.5-.16-.7.16-.21.32-.8 1.04-.98 1.25-.18.21-.36.24-.68.08-.32-.16-1.35-.5-2.57-1.59a9.63 9.63 0 0 1-1.78-2.22c-.18-.32 0-.5.14-.65.13-.14.32-.36.48-.54.16-.18.21-.32.32-.53.1-.21.05-.4-.02-.56-.08-.16-.7-1.7-.97-2.33-.25-.6-.5-.52-.7-.53h-.6c-.2 0-.53.08-.81.4-.28.32-1.06 1.04-1.06 2.54s1.09 2.95 1.24 3.15c.15.21 2.14 3.28 5.2 4.6.73.3 1.3.5 1.74.64.73.23 1.4.2 1.92.12.59-.08 1.9-.78 2.16-1.52.27-.74.27-1.38.19-1.52-.08-.15-.29-.23-.6-.4Z" fill="#fff"/></svg>
+      🏢 בעל עסק? תצטרף לגלגל ההטבות
+    </button>
+  </a>
   <a href="/admin" style="text-decoration:none;">
     <button class="btn btn-ghost" style="width:auto;padding:10px 24px;font-size:14px;">⚙️ איזור ניהול</button>
   </a>
@@ -577,6 +819,20 @@ function goTo(screenId, dot) {
     if (i < dot) d.classList.add('done');
     else if (i === dot) d.classList.add('active');
   });
+  // Trigger entrance animations on newly visible elements
+  requestAnimationFrame(() => triggerScreenAnimations(screenId));
+}
+
+// Reveal ae-* elements in the target screen with staggered delays
+function triggerScreenAnimations(screenId) {
+  const screen = document.getElementById(screenId);
+  if (!screen) return;
+  const aeEls = screen.querySelectorAll('.ae-fade-up, .ae-fade-in, .ae-scale-in');
+  aeEls.forEach(el => {
+    el.classList.remove('visible');
+    void el.offsetWidth; // force reflow
+    el.classList.add('visible');
+  });
 }
 
 function showError(id, msg) {
@@ -734,21 +990,25 @@ async function loadWheelData() {
 
 // Build wheel segments proportional to lossProbability and each benefit's probability weight.
 // Loss segments make up lossProbability% of total; win segments fill the rest.
+// Loss segments are RANDOMLY spread among win segments (not bunched at the end).
 function buildWheelSegments(benefits, lossProb) {
   const lossSlots = Math.max(0, Math.round(TARGET_SEGMENTS * lossProb / 100));
   const winSlots = TARGET_SEGMENTS - lossSlots;
-  const segments = [];
+  const winSegments = [];
 
   if (benefits.length > 0 && winSlots > 0) {
     const totalProb = benefits.reduce((s, b) => s + (b.probability || 1), 0);
     benefits.forEach(b => {
       const count = Math.max(1, Math.round(winSlots * (b.probability || 1) / totalProb));
-      for (let i = 0; i < count; i++) segments.push({ ...b, isLoss: false });
+      for (let i = 0; i < count; i++) winSegments.push({ ...b, isLoss: false });
     });
   }
 
+  // Randomly interleave loss segments among win segments
+  const segments = [...winSegments];
   for (let i = 0; i < lossSlots; i++) {
-    segments.push({ prizeText: 'נסה שוב 😅', color: '#2D2D4E', isLoss: true });
+    const pos = Math.floor(Math.random() * (segments.length + 1));
+    segments.splice(pos, 0, { prizeText: 'נסה שוב 😅', color: '#2D2D4E', isLoss: true });
   }
 
   return segments;
@@ -769,35 +1029,7 @@ function updateTicker() {
   ).join('');
   tickerEl.innerHTML = items + items; // duplicate for seamless loop
   wrapEl.style.display = 'block';
-
-  // Populate the detailed prizes list below the wheel (deduplicated, with stock count)
-  const listEl = document.getElementById('prizes-list');
-  const itemsEl = document.getElementById('prizes-list-items');
-  if (!listEl || !itemsEl) return;
-  // Deduplicate for the list display
-  const seenKeys = new Set();
-  const uniqueBenefits = [];
-  nonLossSegments.forEach(b => {
-    const key = (b.businessName || '') + '|' + (b.prizeText || '');
-    if (!seenKeys.has(key)) { seenKeys.add(key); uniqueBenefits.push(b); }
-  });
-  const meta = buildSegmentMeta(uniqueBenefits);
-  itemsEl.innerHTML = uniqueBenefits.map((b, i) => {
-    const color = safeColor((meta[i] && meta[i].color) || b.color || '#7B5CF6');
-    const icon = meta[i] ? meta[i].icon : '🎁';
-    const stockLabel = (b.remainingStock != null && b.remainingStock > 1)
-      ? `<div style="font-size:11px;color:var(--gold);margin-top:2px;">נותרו ${b.remainingStock} יחידות</div>`
-      : '';
-    return `<div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid rgba(255,255,255,0.07);border-right:3px solid ${color};border-radius:10px;padding:10px 12px;">
-      <span style="font-size:20px;flex-shrink:0;">${esc(icon)}</span>
-      <div style="min-width:0;">
-        <div style="font-family:'Rubik',sans-serif;font-size:13px;font-weight:700;color:#fff;line-height:1.3;">${esc(b.prizeText)}</div>
-        ${b.businessName ? `<div style="font-size:12px;color:var(--muted);margin-top:1px;">${esc(b.businessName)}</div>` : ''}
-        ${stockLabel}
-      </div>
-    </div>`;
-  }).join('');
-  listEl.style.display = uniqueBenefits.length > 0 ? 'block' : 'none';
+}
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
@@ -1221,6 +1453,36 @@ function launchConfetti() {
     }, Math.random() * 600);
   }
 }
+
+// Floating background particles for ambient atmosphere
+(function createBgParticles() {
+  const symbols = ['⭐','✨','🌟','💫','🎡','🎉','🏆','🎊','💎','🔮'];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElement('div');
+    el.className = 'bg-particle';
+    el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    const size = 10 + Math.random() * 14;
+    el.style.cssText = [
+      `left:${Math.random() * 100}vw`,
+      `font-size:${size}px`,
+      `opacity:${0.06 + Math.random() * 0.12}`,
+      `animation-duration:${14 + Math.random() * 18}s`,
+      `animation-delay:${Math.random() * 16}s`,
+    ].join(';');
+    document.body.appendChild(el);
+  }
+})();
+
+// Trigger entrance animations on the initial active screen
+(function initAeAnimations() {
+  const initScreen = document.querySelector('.screen.active');
+  if (initScreen) triggerScreenAnimations(initScreen.id);
+  // Also animate the header elements immediately
+  document.querySelectorAll('.header .ae-fade-up, .header .ae-fade-in').forEach(el => {
+    void el.offsetWidth;
+    el.classList.add('visible');
+  });
+})();
 </script>
 </body>
 </html>
