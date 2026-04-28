@@ -460,12 +460,8 @@ function getFirebaseError(err) {
 
 function resetRecaptcha() {
   if (window.recaptchaVerifier) {
-    window.recaptchaVerifier.render().then(widgetId => {
-      window.grecaptcha.reset(widgetId);
-    }).catch(() => {
-      try { window.recaptchaVerifier.clear(); } catch (_) {}
-      window.recaptchaVerifier = null;
-    });
+    try { window.recaptchaVerifier.clear(); } catch (_) {}
+    window.recaptchaVerifier = null;
   }
 }
 
@@ -622,23 +618,31 @@ async function verifyOTP() {
         document.getElementById('reg-btn').onclick = async () => {
           regName = document.getElementById('reg-name').value.trim();
           if (!regName) return showError('reg-error', 'נא להזין שם מלא');
-          const r2 = await fetch(`${API}/api/auth/firebase-verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken, name: regName }),
-          });
-          const d2 = await r2.json();
-          if (r2.ok && d2.token) {
-            token = d2.token; userName = d2.name;
-            localStorage.setItem('whl_token', token);
-            localStorage.setItem('whl_name', userName);
-            // Restore normal send-OTP handler for next time
-            document.getElementById('reg-btn').onclick = sendOTP;
-            showGreeting(userName);
-            goTo('screen-contact', 2);
-          } else {
-            showError('reg-error', d2.error || 'שגיאה, נסה שנית');
+          const regBtn2 = document.getElementById('reg-btn');
+          regBtn2.disabled = true; regBtn2.textContent = 'שומר...';
+          try {
+            const r2 = await fetch(`${API}/api/auth/firebase-verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken, name: regName }),
+            });
+            const d2 = await r2.json();
+            if (r2.ok && d2.token) {
+              token = d2.token; userName = d2.name;
+              localStorage.setItem('whl_token', token);
+              localStorage.setItem('whl_name', userName);
+              // Restore normal send-OTP handler for next time
+              document.getElementById('reg-btn').onclick = sendOTP;
+              showGreeting(userName);
+              goTo('screen-contact', 2);
+            } else {
+              showError('reg-error', d2.error || 'שגיאה, נסה שנית');
+            }
+          } catch (e2) {
+            console.error('firebase-verify retry error:', e2);
+            showError('reg-error', 'בעיית חיבור, נסה שנית');
           }
+          regBtn2.disabled = false; regBtn2.textContent = 'המשך →';
         };
         return;
       }
