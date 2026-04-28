@@ -226,11 +226,15 @@
         </div>
         <div class="setting-row">
           <div class="setting-info">
-            <h4>הסתברות הפסד גלובלית (%)</h4>
-            <p>אחוז הסיכוי שסיבוב לא יזכה בפרס</p>
+            <h4>יחס זוכים לסיבובים</h4>
+            <p>כמה זוכים יהיו מתוך כמה סיבובים (בחירה אקראית)</p>
           </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <input type="number" id="set-globalLossProbability" min="0" max="100" style="width:80px;margin:0" onchange="saveSetting('globalLossProbability', +this.value)">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <input type="number" id="set-winnerRatioWinners" min="0" max="10000" style="width:70px;margin:0" placeholder="20" oninput="onWinnerRatioChange()">
+            <span style="color:var(--muted);white-space:nowrap">זוכים מתוך</span>
+            <input type="number" id="set-winnerRatioSpins" min="1" max="100000" style="width:80px;margin:0" placeholder="100" oninput="onWinnerRatioChange()">
+            <span style="color:var(--muted)">סיבובים</span>
+            <span style="color:var(--accent2);font-size:13px;white-space:nowrap" id="set-ratio-pct"></span>
           </div>
         </div>
       </div>
@@ -648,7 +652,12 @@ async function loadSettings() {
   const d = await r.json();
   document.getElementById('set-wheelActive').checked = !!d.wheelActive;
   document.getElementById('set-weekendBonus').checked = !!d.weekendBonus;
-  document.getElementById('set-globalLossProbability').value = d.globalLossProbability ?? 80;
+  const winners = d.winnerRatioWinners ?? 20;
+  const spins = d.winnerRatioSpins ?? 100;
+  document.getElementById('set-winnerRatioWinners').value = winners;
+  document.getElementById('set-winnerRatioSpins').value = spins;
+  const winPct = spins > 0 ? ((winners / spins) * 100).toFixed(1) : '0.0';
+  document.getElementById('set-ratio-pct').textContent = `(${winPct}% זכיות)`;
 }
 
 async function saveSetting(key, value) {
@@ -690,6 +699,42 @@ async function doRedeem() {
     el.textContent = `❌ ${d.error}`;
   }
   el.style.display = 'block';
+}
+// ── WINNER RATIO ────────────────────────────────────
+let _winnerRatioTimer = null;
+function onWinnerRatioChange() {
+  const winners = +document.getElementById('set-winnerRatioWinners').value || 0;
+  const spins = +document.getElementById('set-winnerRatioSpins').value || 1;
+  if (spins > 0) {
+    const winPct = (winners / spins) * 100;
+    document.getElementById('set-ratio-pct').textContent = `(${winPct.toFixed(1)}% זכיות)`;
+  }
+  clearTimeout(_winnerRatioTimer);
+  _winnerRatioTimer = setTimeout(async () => {
+    const w = +document.getElementById('set-winnerRatioWinners').value || 0;
+    const s = +document.getElementById('set-winnerRatioSpins').value;
+    if (!s || s < 1) return;
+    const lossPct = Math.max(0, Math.min(100, 100 - (w / s) * 100));
+    try {
+      await Promise.all([
+        _saveSettingQuiet('winnerRatioWinners', w),
+        _saveSettingQuiet('winnerRatioSpins', s),
+        _saveSettingQuiet('globalLossProbability', lossPct),
+      ]);
+      showToast('ההגדרה נשמרה ✓');
+    } catch (err) {
+      console.error('Failed to save winner ratio:', err);
+      showToast('בעיית חיבור', true);
+    }
+  }, 800);
+}
+
+async function _saveSettingQuiet(key, value) {
+  await fetch(`${API}/admin/settings`, {
+    method: 'PUT',
+    headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+  });
 }
 </script>
 </body>
