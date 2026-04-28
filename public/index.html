@@ -544,11 +544,6 @@
       <button id="spin-btn" onclick="doSpin()">🎡 סובב!</button>
     </div>
     <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:12px;">סיבוב אחד בכל 24 שעות · בהצלחה!</p>
-    <!-- Prize list: shows all available prizes clearly below the wheel -->
-    <div id="prizes-list" style="display:none;margin-top:14px;">
-      <div style="font-family:'Rubik',sans-serif;font-weight:700;font-size:14px;color:var(--accent2);margin-bottom:8px;text-align:center;">🎁 הפרסים שאפשר לזכות בהם:</div>
-      <div id="prizes-list-items" style="display:flex;flex-direction:column;gap:6px;"></div>
-    </div>
     <button class="btn btn-ghost" style="margin-top:14px;" onclick="logout()">↩ התנתקות</button>
   </div>
 
@@ -586,6 +581,28 @@
 </div>
 
 <div style="text-align:center;margin-top:8px;padding-bottom:16px;position:relative;z-index:1;">
+  <a href="https://wa.me/972556674329?text=%D7%94%D7%99%D7%99%2C%20%D7%90%D7%A0%D7%99%20%D7%91%D7%A2%D7%9C%20%D7%A2%D7%A1%D7%A7%20%D7%95%D7%90%D7%A9%D7%9E%D7%97%20%D7%9C%D7%94%D7%A6%D7%98%D7%A8%D7%A3%20%D7%9C%D7%92%D7%9C%D7%92%D7%9C%20%D7%94%D7%94%D7%98%D7%91%D7%95%D7%AA%20%D7%A9%D7%9C%20%D7%A8%D7%A2%D7%A0%D7%A0%D7%94%21" target="_blank" rel="noopener" style="text-decoration:none;display:block;margin:0 auto 12px;max-width:340px;">
+    <button class="btn" style="
+      width:100%;
+      background:linear-gradient(135deg,#25D366,#128C7E);
+      color:#fff;
+      font-family:'Rubik',sans-serif;
+      font-size:16px;
+      font-weight:700;
+      border-radius:50px;
+      padding:15px 24px;
+      border:none;
+      cursor:pointer;
+      box-shadow:0 4px 22px rgba(37,211,102,0.4);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    ">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0"><path d="M16 2.67A13.33 13.33 0 0 0 4.02 21.03L2.67 29.33l8.5-1.32A13.33 13.33 0 1 0 16 2.67Zm0 24A10.62 10.62 0 0 1 9.94 24.7l-.42-.27-5.04.79.84-4.9-.29-.44A10.66 10.66 0 1 1 16 26.67ZM22.4 19.2c-.32-.16-1.9-.93-2.2-1.04-.29-.1-.5-.16-.7.16-.21.32-.8 1.04-.98 1.25-.18.21-.36.24-.68.08-.32-.16-1.35-.5-2.57-1.59a9.63 9.63 0 0 1-1.78-2.22c-.18-.32 0-.5.14-.65.13-.14.32-.36.48-.54.16-.18.21-.32.32-.53.1-.21.05-.4-.02-.56-.08-.16-.7-1.7-.97-2.33-.25-.6-.5-.52-.7-.53h-.6c-.2 0-.53.08-.81.4-.28.32-1.06 1.04-1.06 2.54s1.09 2.95 1.24 3.15c.15.21 2.14 3.28 5.2 4.6.73.3 1.3.5 1.74.64.73.23 1.4.2 1.92.12.59-.08 1.9-.78 2.16-1.52.27-.74.27-1.38.19-1.52-.08-.15-.29-.23-.6-.4Z" fill="#fff"/></svg>
+      🏢 בעל עסק? תצטרף לגלגל ההטבות
+    </button>
+  </a>
   <a href="/admin" style="text-decoration:none;">
     <button class="btn btn-ghost" style="width:auto;padding:10px 24px;font-size:14px;">⚙️ איזור ניהול</button>
   </a>
@@ -1012,35 +1029,7 @@ function updateTicker() {
   ).join('');
   tickerEl.innerHTML = items + items; // duplicate for seamless loop
   wrapEl.style.display = 'block';
-
-  // Populate the detailed prizes list below the wheel (deduplicated, with stock count)
-  const listEl = document.getElementById('prizes-list');
-  const itemsEl = document.getElementById('prizes-list-items');
-  if (!listEl || !itemsEl) return;
-  // Deduplicate for the list display
-  const seenKeys = new Set();
-  const uniqueBenefits = [];
-  nonLossSegments.forEach(b => {
-    const key = (b.businessName || '') + '|' + (b.prizeText || '');
-    if (!seenKeys.has(key)) { seenKeys.add(key); uniqueBenefits.push(b); }
-  });
-  const meta = buildSegmentMeta(uniqueBenefits);
-  itemsEl.innerHTML = uniqueBenefits.map((b, i) => {
-    const color = safeColor((meta[i] && meta[i].color) || b.color || '#7B5CF6');
-    const icon = meta[i] ? meta[i].icon : '🎁';
-    const stockLabel = (b.remainingStock != null && b.remainingStock > 1)
-      ? `<div style="font-size:11px;color:var(--gold);margin-top:2px;">נותרו ${b.remainingStock} יחידות</div>`
-      : '';
-    return `<div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid rgba(255,255,255,0.07);border-right:3px solid ${color};border-radius:10px;padding:10px 12px;">
-      <span style="font-size:20px;flex-shrink:0;">${esc(icon)}</span>
-      <div style="min-width:0;">
-        <div style="font-family:'Rubik',sans-serif;font-size:13px;font-weight:700;color:#fff;line-height:1.3;">${esc(b.prizeText)}</div>
-        ${b.businessName ? `<div style="font-size:12px;color:var(--muted);margin-top:1px;">${esc(b.businessName)}</div>` : ''}
-        ${stockLabel}
-      </div>
-    </div>`;
-  }).join('');
-  listEl.style.display = uniqueBenefits.length > 0 ? 'block' : 'none';
+}
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
