@@ -609,7 +609,7 @@ async function loadBenefits() {
   tbody.innerHTML = data.map(b => {
     const stockClass = b.remainingStock === 0 ? 'empty' : b.remainingStock <= 5 ? 'low' : '';
     return `
-    <tr>
+    <tr data-benefit-id="${esc(b._id)}">
       <td>
         ${b.logoUrl ? `<img class="biz-logo" src="${esc(b.logoUrl)}" alt="${esc(b.businessName)}" style="width:28px;height:28px;" onerror="this.style.display='none'">` : ''}
         <span class="color-dot" style="background:${esc(b.color || '#7B5CF6')}"></span>${esc(b.businessName)}
@@ -617,18 +617,30 @@ async function loadBenefits() {
       <td>${esc(b.prizeText)}</td>
       <td>
         <div class="stock-control">
-          <input type="number" id="stock-${esc(b._id)}" value="${b.remainingStock}" min="0" max="99999" style="width:62px;margin:0;padding:5px 8px;font-size:13px;text-align:center;" onkeydown="if(event.key==='Enter')saveStock('${esc(b._id)}',this)">
-          <button class="btn btn-accent" style="padding:4px 9px;font-size:12px;" onclick="saveStock('${esc(b._id)}',document.getElementById('stock-${esc(b._id)}'))">✓</button>
+          <input type="number" class="stock-input" value="${b.remainingStock}" min="0" max="99999" style="width:62px;margin:0;padding:5px 8px;font-size:13px;text-align:center;">
+          <button class="btn btn-accent btn-save-stock" style="padding:4px 9px;font-size:12px;">✓</button>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">מתוך ${b.totalStock}</div>
       </td>
       <td><span class="badge ${b.isActive ? 'badge-green' : 'badge-red'}">${b.isActive ? 'פעיל' : 'כבוי'}</span></td>
       <td style="display:flex;gap:6px">
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick='openBenefitModal(${JSON.stringify(b)})'>✏️</button>
-        <button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="deleteBenefit('${b._id}')">🗑️</button>
+        <button class="btn btn-ghost btn-edit-benefit" style="padding:5px 10px;font-size:12px">✏️</button>
+        <button class="btn btn-danger btn-delete-benefit" style="padding:5px 10px;font-size:12px">🗑️</button>
       </td>
     </tr>`;
   }).join('');
+
+  // Attach delegated event handlers to avoid inline handlers and XSS risk
+  tbody.querySelectorAll('tr[data-benefit-id]').forEach(row => {
+    const id = row.dataset.benefitId;
+    const ben = data.find(b => b._id === id);
+    const stockInput = row.querySelector('.stock-input');
+
+    row.querySelector('.btn-save-stock').addEventListener('click', () => saveStock(id, stockInput));
+    stockInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveStock(id, stockInput); });
+    row.querySelector('.btn-edit-benefit').addEventListener('click', () => openBenefitModal(ben));
+    row.querySelector('.btn-delete-benefit').addEventListener('click', () => deleteBenefit(id));
+  });
 }
 
 function openBenefitModal(b, prefillBizId) {

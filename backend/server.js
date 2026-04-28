@@ -562,7 +562,7 @@ app.patch('/api/admin/benefits/:id/stock', adminAuth, adminLimiter, async (req, 
   try {
     const newStock = parseInt(req.body.remainingStock, 10);
     if (!Number.isInteger(newStock) || newStock < 0) {
-      return res.status(400).json({ error: 'remainingStock חייב להיות מספר שלם חיובי' });
+      return res.status(400).json({ error: 'remainingStock חייב להיות מספר שלם (0 ומעלה)' });
     }
     const benefit = await Benefit.findByIdAndUpdate(
       req.params.id,
