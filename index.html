@@ -421,10 +421,203 @@
     .prize-name { color: var(--gold); }
   }
 
+  /* ── Animated subtle grid overlay ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+    background-size: 72px 72px;
+    pointer-events: none; z-index: 0;
+    animation: grid-drift 45s linear infinite;
+  }
+  @keyframes grid-drift {
+    0%   { background-position: 0 0, 0 0; }
+    100% { background-position: 72px 72px, 72px 72px; }
+  }
+
+  /* ── Rotating light rays ── */
+  #bg-rays {
+    position: fixed;
+    width: 300vmax; height: 300vmax;
+    top: 50%; left: 50%;
+    pointer-events: none; z-index: 0;
+    animation: rays-spin 120s linear infinite;
+    background: repeating-conic-gradient(
+      rgba(245,200,66,0.022)  0deg  2.5deg,
+      transparent             2.5deg 18deg,
+      rgba(123,92,246,0.016) 18deg 21deg,
+      transparent            21deg  40deg,
+      rgba(245,200,66,0.018) 40deg 42.5deg,
+      transparent            42.5deg 72deg,
+      rgba(0,187,249,0.013)  72deg 74.5deg,
+      transparent            74.5deg 108deg,
+      rgba(245,200,66,0.020) 108deg 110.5deg,
+      transparent            110.5deg 144deg,
+      rgba(123,92,246,0.014) 144deg 146.5deg,
+      transparent            146.5deg 180deg,
+      rgba(245,200,66,0.018) 180deg 182.5deg,
+      transparent            182.5deg 216deg,
+      rgba(0,187,249,0.011)  216deg 218.5deg,
+      transparent            218.5deg 252deg,
+      rgba(245,200,66,0.020) 252deg 254.5deg,
+      transparent            254.5deg 288deg,
+      rgba(123,92,246,0.015) 288deg 290.5deg,
+      transparent            290.5deg 324deg,
+      rgba(245,200,66,0.016) 324deg 326.5deg,
+      transparent            326.5deg 360deg
+    );
+  }
+  @keyframes rays-spin {
+    0%   { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
+  /* ── Intro overlay ── */
+  #intro-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #030310;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; flex-direction: column;
+  }
+  #intro-overlay.exit {
+    animation: intro-exit 0.9s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+    pointer-events: none;
+  }
+  @keyframes intro-exit {
+    0%   { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.07); }
+  }
+  .intro-bg-orb {
+    position: absolute; border-radius: 50%;
+    pointer-events: none; filter: blur(100px);
+  }
+  .intro-bg-orb-1 {
+    width: 500px; height: 500px;
+    background: rgba(123,92,246,0.4);
+    top: -180px; left: -180px;
+    animation: orb-drift 9s ease-in-out infinite alternate;
+  }
+  .intro-bg-orb-2 {
+    width: 450px; height: 450px;
+    background: rgba(245,200,66,0.28);
+    bottom: -140px; right: -140px;
+    animation: orb-drift 11s ease-in-out infinite alternate-reverse;
+  }
+  .intro-bg-orb-3 {
+    width: 360px; height: 360px;
+    background: rgba(0,187,249,0.15);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: orb-drift 14s ease-in-out infinite alternate;
+    animation-delay: -4s;
+  }
+  .intro-flare {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px; height: 4px; border-radius: 50%;
+    pointer-events: none; z-index: 4;
+    animation: intro-flare-anim 0.65s ease-out 0.1s forwards;
+    opacity: 0;
+  }
+  @keyframes intro-flare-anim {
+    0%  { opacity: 0; box-shadow: 0 0 0 0 rgba(245,200,66,0.9); }
+    30% { opacity: 1; box-shadow: 0 0 90px 45px rgba(245,200,66,0.55), 0 0 180px 90px rgba(123,92,246,0.25); }
+    100%{ opacity: 0; box-shadow: 0 0 240px 120px rgba(245,200,66,0); }
+  }
+  #intro-content {
+    position: relative; text-align: center; z-index: 3;
+    padding: 0 24px; max-width: 520px; width: 100%;
+  }
+  .intro-line {
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent 0%, #C9952A 20%, #FFE566 50%, #C9952A 80%, transparent 100%);
+    box-shadow: 0 0 16px rgba(245,200,66,0.55);
+    width: 0; margin: 16px auto; opacity: 0;
+  }
+  .intro-line.go { animation: intro-line-draw 0.65s cubic-bezier(0.4,0,0.2,1) forwards; }
+  @keyframes intro-line-draw {
+    0%   { width: 0; opacity: 0; }
+    15%  { opacity: 1; }
+    100% { width: min(300px, 74vw); opacity: 1; }
+  }
+  #intro-main-title {
+    display: flex; gap: 20px;
+    justify-content: center; align-items: baseline;
+    flex-wrap: wrap; margin: 4px 0;
+  }
+  .intro-word {
+    display: inline-block;
+    font-family: 'Rubik', sans-serif; font-weight: 900;
+    font-size: clamp(50px, 13vw, 82px); line-height: 1.05;
+    background: linear-gradient(135deg, #FFE566 0%, #F5C842 45%, #C9952A 75%, #FFE566 100%);
+    background-size: 300% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    opacity: 0; filter: blur(14px);
+    transform: translateY(48px) scale(0.80);
+    will-change: transform, opacity, filter;
+  }
+  .intro-word.go {
+    animation: intro-word-in 0.88s cubic-bezier(0.34,1.56,0.64,1) forwards,
+               gold-text-flow 3s linear 0.88s infinite;
+  }
+  @keyframes intro-word-in {
+    0%   { opacity: 0; transform: translateY(48px) scale(0.80); filter: blur(14px); }
+    55%  { filter: blur(2px); }
+    75%  { filter: blur(0); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  #intro-sub {
+    font-family: 'Rubik', sans-serif; font-weight: 700;
+    font-size: clamp(20px, 5vw, 28px);
+    color: rgba(240,239,248,0.85);
+    letter-spacing: 6px; margin-top: 4px;
+    opacity: 0; transform: translateY(14px);
+  }
+  #intro-sub.go {
+    animation: intro-sub-in 0.72s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  @keyframes intro-sub-in {
+    0%   { opacity: 0; transform: translateY(14px); letter-spacing: 12px; }
+    100% { opacity: 0.85; transform: translateY(0); letter-spacing: 6px; }
+  }
+  .intro-sparkle {
+    position: absolute; pointer-events: none;
+    animation: intro-sparkle-fly 1.5s ease-out forwards; z-index: 5;
+    font-size: 18px;
+  }
+  @keyframes intro-sparkle-fly {
+    0%   { opacity: 0; transform: translate(0,0) scale(0.4) rotate(0deg); }
+    15%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(1.7) rotate(var(--dr)); }
+  }
+  #intro-skip {
+    position: absolute;
+    bottom: max(28px, env(safe-area-inset-bottom, 28px));
+    left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: rgba(255,255,255,0.42);
+    font-family: 'Assistant', sans-serif; font-size: 14px;
+    padding: 9px 28px; border-radius: 50px;
+    cursor: pointer; transition: all 0.3s; z-index: 6;
+    opacity: 0; animation: intro-skip-in 0.5s ease 2.5s forwards;
+    backdrop-filter: blur(10px);
+  }
+  #intro-skip:hover {
+    color: rgba(255,255,255,0.9);
+    border-color: rgba(255,255,255,0.42);
+    background: rgba(255,255,255,0.12);
+  }
+  @keyframes intro-skip-in { to { opacity: 1; } }
+
   /* ── Respect reduced-motion preference ── */
   @media (prefers-reduced-motion: reduce) {
     body                 { animation: none; background-position: 0% 50%; }
     body::before         { animation: none; }
+    body::after          { animation: none; }
     .bg-orb              { animation: none; }
     .bg-particle         { animation: none; display: none; }
     .logo-badge          { animation: none; }
@@ -444,6 +637,8 @@
     .win-icon,
     .loss-emoji          { animation: none; }
     .prize-name          { animation: none; background-position: 0% center; }
+    #intro-overlay       { display: none; }
+    #bg-rays             { animation: none; }
   }
 </style>
   <!-- Firebase SDK (compat – works with plain JS without bundler) -->
@@ -452,11 +647,36 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 </head>
 <body>
+
+<!-- ── Cinematic intro overlay ── -->
+<div id="intro-overlay">
+  <div class="intro-bg-orb intro-bg-orb-1"></div>
+  <div class="intro-bg-orb intro-bg-orb-2"></div>
+  <div class="intro-bg-orb intro-bg-orb-3"></div>
+  <div class="intro-flare"></div>
+  <div id="intro-content">
+    <div class="intro-line" id="intro-line-1"></div>
+    <div id="intro-main-title">
+      <span class="intro-word" id="intro-w1">גלגל</span>
+      <span class="intro-word" id="intro-w2">ההטבות</span>
+    </div>
+    <div class="intro-line" id="intro-line-2"></div>
+    <div id="intro-sub">של רעננה</div>
+  </div>
+  <button id="intro-skip" onclick="dismissIntro()">המשך ←</button>
+</div>
+
+<!-- ── Rotating light rays ── -->
+<div id="bg-rays"></div>
+
+<!-- ── Aurora orbs ── -->
 <div class="bg-orb" style="width:550px;height:550px;background:rgba(123,92,246,0.2);top:-160px;left:-200px;animation-duration:13s;"></div>
 <div class="bg-orb" style="width:420px;height:420px;background:rgba(245,200,66,0.13);bottom:-100px;right:-160px;animation-duration:16s;animation-delay:3s;"></div>
 <div class="bg-orb" style="width:300px;height:300px;background:rgba(34,197,94,0.1);top:38%;left:-110px;animation-duration:11s;animation-delay:5s;"></div>
 <div class="bg-orb" style="width:380px;height:380px;background:rgba(0,187,249,0.09);top:58%;right:-140px;animation-duration:19s;animation-delay:2s;"></div>
 <div class="bg-orb" style="width:220px;height:220px;background:rgba(245,77,100,0.1);top:18%;right:-70px;animation-duration:9s;animation-delay:7s;"></div>
+<div class="bg-orb" style="width:460px;height:460px;background:rgba(245,200,66,0.07);top:28%;left:50%;transform:translateX(-50%);animation-duration:18s;animation-delay:4s;"></div>
+<div class="bg-orb" style="width:240px;height:240px;background:rgba(123,92,246,0.14);bottom:22%;left:-75px;animation-duration:15s;animation-delay:9s;"></div>
 <div class="container">
   <div class="header">
     <div class="logo-badge">🎡 רעננה</div>
@@ -578,6 +798,49 @@
 </div>
 
 <script>
+// ─── Cinematic intro overlay ──────────────────────────────────────────────────
+function dismissIntro() {
+  const overlay = document.getElementById('intro-overlay');
+  if (!overlay || overlay.classList.contains('exit')) return;
+  overlay.classList.add('exit');
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 900);
+}
+
+(function runIntro() {
+  const addGo = (id, delay) =>
+    setTimeout(() => { const el = document.getElementById(id); if (el) el.classList.add('go'); }, delay);
+
+  addGo('intro-line-1',  300);
+  addGo('intro-w1',      530);
+  addGo('intro-w2',      880);
+  addGo('intro-line-2', 1100);
+  addGo('intro-sub',    1330);
+
+  // Sparkle burst when title is fully revealed
+  setTimeout(() => {
+    const overlay = document.getElementById('intro-overlay');
+    if (!overlay) return;
+    const syms = ['✨','⭐','💫','🌟','✦','◈'];
+    for (let i = 0; i < 14; i++) {
+      const e = document.createElement('div');
+      e.className = 'intro-sparkle';
+      const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.25;
+      const dist  = 110 + Math.random() * 140;
+      e.style.left = 'calc(50% + 0px)';
+      e.style.top  = 'calc(50% + 0px)';
+      e.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+      e.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+      e.style.setProperty('--dr', `${Math.random() * 360 - 180}deg`);
+      e.style.animationDelay = `${Math.random() * 0.35}s`;
+      e.textContent = syms[Math.floor(Math.random() * syms.length)];
+      overlay.appendChild(e);
+    }
+  }, 1820);
+
+  // Auto-dismiss
+  setTimeout(dismissIntro, 4500);
+})();
+
 // ─── Firebase config ──────────────────────────────────────────────────────────
 // Values are injected server-side from environment variables via /firebase-env.js
 const firebaseConfig = window.FIREBASE_CONFIG;
