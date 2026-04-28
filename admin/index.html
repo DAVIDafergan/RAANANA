@@ -617,7 +617,7 @@ async function loadBenefits() {
       <td>${esc(b.prizeText)}</td>
       <td>
         <div class="stock-control">
-          <input type="number" class="stock-input" value="${b.remainingStock}" min="0" max="99999" style="width:62px;margin:0;padding:5px 8px;font-size:13px;text-align:center;">
+          <input type="number" class="stock-input" value="${b.remainingStock}" min="0" max="99999">
           <button class="btn btn-accent btn-save-stock" style="padding:4px 9px;font-size:12px;">✓</button>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">מתוך ${b.totalStock}</div>
@@ -899,7 +899,7 @@ async function _saveSettingQuiet(key, value) {
 
 async function saveStock(benefitId, inputEl) {
   const val = parseInt(inputEl.value, 10);
-  if (isNaN(val) || val < 0) { showToast('ערך לא תקין', true); return; }
+  if (isNaN(val) || val < 0) { showToast('ערך חייב להיות מספר שלם (0 ומעלה)', true); return; }
   inputEl.disabled = true;
   try {
     const r = await fetch(`${API}/admin/benefits/${benefitId}/stock`, {

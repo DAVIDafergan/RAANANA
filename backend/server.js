@@ -411,7 +411,10 @@ app.post('/api/admin/upload-logo', adminAuth, adminLimiter, (req, res, next) => 
   logoUpload.single('logo')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'לא נבחר קובץ' });
-    // Convert to base64 data URI so the logo is stored in MongoDB and survives redeployments
+    // Convert to base64 data URI so the logo is stored in MongoDB and survives redeployments.
+    // Trade-off: base64 encoding adds ~33% overhead (max ~2.7 MB per logo with a 2 MB input limit).
+    // MongoDB's 16 MB document limit is not a concern here because logos are stored on the
+    // Business/Benefit document level and a typical compressed logo image is well under 500 KB.
     const base64 = req.file.buffer.toString('base64');
     const logoUrl = `data:${req.file.mimetype};base64,${base64}`;
     res.json({ logoUrl });
