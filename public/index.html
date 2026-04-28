@@ -615,8 +615,13 @@
 // ─── Firebase config ──────────────────────────────────────────────────────────
 // Values are injected server-side from environment variables via /firebase-env.js
 const firebaseConfig = window.FIREBASE_CONFIG;
-firebase.initializeApp(firebaseConfig);
-const fbAuth = firebase.auth();
+let fbAuth = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  fbAuth = firebase.auth();
+} catch (e) {
+  console.warn('Firebase init failed – OTP registration will be unavailable:', e);
+}
 let confirmationResult = null;
 
 const API = '';  // ריק = אותו origin (Express מגיש את ה-HTML)
@@ -680,6 +685,7 @@ function normalizePhoneForFirebase(phone) {
 
 // Setup Firebase invisible reCAPTCHA – create only once to avoid double-render errors
 function setupRecaptcha() {
+  if (!fbAuth) return;
   if (!window.recaptchaVerifier) {
     window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
       size: 'invisible',
@@ -849,6 +855,7 @@ async function sendOTP() {
   if (!regPhone || regPhone.replace(/\D/g,'').length < 9) {
     return showError('reg-error', 'נא להזין מספר טלפון תקין');
   }
+  if (!fbAuth) return showError('reg-error', 'שירות האימות אינו זמין כרגע, נסה שנית מאוחר יותר');
 
   const btn = document.getElementById('reg-btn');
   btn.disabled = true; btn.textContent = 'שולח SMS...';
@@ -1029,7 +1036,6 @@ function updateTicker() {
   ).join('');
   tickerEl.innerHTML = items + items; // duplicate for seamless loop
   wrapEl.style.display = 'block';
-}
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
