@@ -367,6 +367,17 @@ app.post('/api/admin/grant-bonus-spins', adminAuth, adminLimiter, async (req, re
   }
 });
 
+app.delete('/api/admin/users/:id', adminAuth, adminLimiter, async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ error: 'משתמש לא נמצא' });
+    await Spin.deleteMany({ userId: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
 app.post('/api/admin/users/:id/grant-spin', adminAuth, adminLimiter, async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(req.params.id, { $inc: { bonusSpins: 1 } }, { new: true });

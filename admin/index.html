@@ -720,8 +720,30 @@ async function loadUsers() {
       <td><span class="badge ${u.bonusSpins > 0 ? 'badge-green' : ''}" style="${u.bonusSpins > 0 ? '' : 'color:var(--muted)'}">${u.bonusSpins || 0}</span></td>
       <td>${u.lastSpin ? new Date(u.lastSpin).toLocaleString('he-IL') : '—'}</td>
       <td>${new Date(u.createdAt).toLocaleDateString('he-IL')}</td>
-      <td><button class="btn btn-ghost" style="padding:5px 12px;font-size:12px" onclick="grantSpinToUser('${esc(u._id)}', this)">🎁 סיבוב נוסף</button></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px" onclick="grantSpinToUser('${esc(u._id)}', this)">🎁 סיבוב נוסף</button>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="deleteUser('${esc(u._id)}','${esc(u.name)}')">🗑️</button>
+      </td>
     </tr>`).join('');
+}
+
+async function deleteUser(userId, userName) {
+  if (!confirm(`למחוק את המשתמש "${userName}"? פעולה זו תמחק גם את כל הסיבובים שלו.`)) return;
+  try {
+    const r = await fetch(`${API}/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-key': adminKey }
+    });
+    if (r.ok) {
+      showToast('המשתמש נמחק ✓');
+      loadUsers();
+    } else {
+      const e = await r.json();
+      showToast(e.error || 'שגיאה במחיקה', true);
+    }
+  } catch {
+    showToast('בעיית חיבור', true);
+  }
 }
 
 async function grantSpinToUser(userId, btn) {
