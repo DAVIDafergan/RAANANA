@@ -1,4 +1,15 @@
 require('dotenv').config();
+
+// Validate required environment variables before starting the server.
+// Missing vars are the most common cause of 500 errors at runtime.
+const REQUIRED_ENV_VARS = ['MONGO_URI', 'SECRET'];
+const missingEnvVars = REQUIRED_ENV_VARS.filter(k => !process.env[k]);
+if (missingEnvVars.length) {
+  console.error(`❌ Missing required environment variables: ${missingEnvVars.join(', ')}`);
+  console.error('Set these variables in your Railway (or .env) configuration and redeploy.');
+  process.exit(1);
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
@@ -185,7 +196,6 @@ app.post('/api/auth/quick-login', userLimiter, async (req, res) => {
       }
     }
 
-    if (!process.env.SECRET) return res.status(500).json({ error: 'שגיאת תצורת שרת' });
     const token = Buffer.from(`${user._id}:${process.env.SECRET}`).toString('base64');
     return res.json({ success: true, token, userId: user._id, name: user.name, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
   } catch (err) {
@@ -252,7 +262,6 @@ app.post('/api/auth/firebase-verify', otpLimiter, async (req, res) => {
       }
     }
 
-    if (!process.env.SECRET) return res.status(500).json({ error: 'שגיאת תצורת שרת' });
     const token = Buffer.from(`${user._id}:${process.env.SECRET}`).toString('base64');
     return res.json({ success: true, token, userId: user._id, name: user.name, isNewUser, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
   } catch (err) {
