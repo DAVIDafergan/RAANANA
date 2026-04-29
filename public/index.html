@@ -227,6 +227,12 @@
   }
   .btn-ghost:hover { background: rgba(123,92,246,0.15); border-color: rgba(123,92,246,0.5); transform: translateY(-1px); }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+  .btn-whatsapp {
+    background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; margin-top: 16px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 22px rgba(37,211,102,0.3);
+  }
+  .btn-whatsapp:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(37,211,102,0.5); }
   .contact-step {
     display: flex; align-items: center; gap: 14px;
     background: linear-gradient(135deg, rgba(123,92,246,0.12), rgba(123,92,246,0.04));
@@ -551,17 +557,12 @@
   <div class="screen" id="screen-win">
     <div class="card result-card">
       <div class="win-icon">🎉</div>
-      <div id="win-personal" style="font-family:'Rubik',sans-serif;font-weight:700;font-size:17px;color:var(--gold);margin-bottom:8px;" class="ae-fade-up" style="transition-delay:0.05s"></div>
+      <div id="win-personal" class="ae-fade-up" style="font-family:'Rubik',sans-serif;font-weight:700;font-size:17px;color:var(--gold);margin-bottom:8px;transition-delay:0.05s"></div>
       <img id="win-logo" class="prize-logo ae-scale-in" src="" alt="" style="transition-delay:0.1s">
       <p class="prize-business ae-fade-up" id="win-business" style="transition-delay:0.15s"></p>
       <p class="prize-name ae-fade-up" id="win-prize" style="transition-delay:0.22s"></p>
-      <div class="vip-card ae-scale-in" style="transition-delay:0.3s">
-        <div class="vip-label">הצג קוד זה בעסק</div>
-        <div class="vip-code" id="win-code"></div>
-        <div class="vip-expires">תוקף: <span class="timer" id="win-timer">02:00:00</span></div>
-      </div>
-      <p class="ae-fade-up" style="font-size:13px;color:var(--muted);line-height:1.6;transition-delay:0.38s">הראה את הקוד המהבהב לצוות בעסק כדי לממש את הפרס שלך. שים לב לתוקף!</p>
-      <button class="btn btn-ghost" style="margin-top:16px;" onclick="logout()">↩ התנתקות</button>
+      <button class="btn btn-whatsapp ae-fade-up" style="transition-delay:0.32s;font-size:18px;padding:18px 28px;font-weight:700;" onclick="claimOnWhatsApp()">💬 למימוש ההטבה בוואטסאפ</button>
+      <button class="btn btn-ghost" style="margin-top:8px;" onclick="logout()">↩ התנתקות</button>
     </div>
   </div>
 
@@ -1390,7 +1391,9 @@ function restoreWin(state) {
 function renderWin(businessName, logoUrl, prizeText, verificationCode, expires) {
   document.getElementById('win-business').textContent = businessName;
   document.getElementById('win-prize').textContent = prizeText;
-  document.getElementById('win-code').textContent = verificationCode;
+  window._winCode = verificationCode;
+  window._winPrizeName = prizeText;
+  window._winBusinessName = businessName;
   const personalEl = document.getElementById('win-personal');
   if (personalEl) personalEl.textContent = userName ? `כל הכבוד, ${userName}! 🎊` : '';
   const logoEl = document.getElementById('win-logo');
@@ -1405,7 +1408,6 @@ function renderWin(businessName, logoUrl, prizeText, verificationCode, expires) 
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     const diff = Math.max(0, expires - new Date());
-    document.getElementById('win-timer').textContent = fmtMs(diff);
     if (diff <= 0) {
       clearInterval(timerInterval);
       localStorage.removeItem('whl_spin_result');
@@ -1414,6 +1416,14 @@ function renderWin(businessName, logoUrl, prizeText, verificationCode, expires) 
     }
   }, 1000);
   goTo('screen-win', 3);
+}
+
+function claimOnWhatsApp() {
+  const prize = window._winPrizeName || document.getElementById('win-prize').textContent;
+  const business = window._winBusinessName || document.getElementById('win-business').textContent;
+  const code = window._winCode || '';
+  const msg = encodeURIComponent(`שלום! זכיתי בגלגל המזל רעננה 🎉\nהטבה: ${prize}\nעסק: ${business}\nקוד: ${code}`);
+  window.open('https://wa.me/972556674329?text=' + msg, '_blank');
 }
 
 function showLoss(nextSpinAt) {
