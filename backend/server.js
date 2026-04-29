@@ -599,6 +599,19 @@ app.patch('/api/admin/benefits/:id/stock', adminAuth, adminLimiter, async (req, 
   }
 });
 
+// Reset all benefit remaining stock back to total stock
+app.post('/api/admin/reset-stock', adminAuth, adminLimiter, async (req, res) => {
+  try {
+    const benefits = await Benefit.find();
+    await Promise.all(benefits.map(b =>
+      Benefit.updateOne({ _id: b._id }, { remainingStock: b.totalStock })
+    ));
+    res.json({ success: true, count: benefits.length });
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
 app.put('/api/admin/settings', adminAuth, async (req, res) => {
   try {
     const { key, value } = req.body;

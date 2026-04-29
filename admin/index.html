@@ -265,6 +265,16 @@
           </div>
         </div>
       </div>
+      <div class="card" style="margin-top:20px">
+        <h2>🔄 איפוס נתונים</h2>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h4>אפס סיכויים (מלאי הטבות)</h4>
+            <p>מחזיר את מלאי כל ההטבות לכמות המקורית שהוגדרה — הסיכויים לזכייה יחזרו כמו בהתחלה</p>
+          </div>
+          <button class="btn btn-danger" style="padding:9px 16px;white-space:nowrap;" onclick="resetStock()">אפס סיכויים</button>
+        </div>
+      </div>
     </div>
 
     <!-- REDEEM -->
@@ -851,6 +861,25 @@ async function grantSpinToUser(userId, btn) {
     showToast('בעיית חיבור', true);
   }
   btn.disabled = false;
+}
+
+async function resetStock() {
+  if (!confirm('לאפס את מלאי כל ההטבות לכמות המקורית?\nהסיכויים לזכייה יחזרו כמו בהתחלה.')) return;
+  try {
+    const r = await fetch(`${API}/admin/reset-stock`, {
+      method: 'POST',
+      headers: { 'x-admin-key': adminKey }
+    });
+    if (r.ok) {
+      const d = await r.json();
+      showToast(`המלאי אופס ✓ (${d.count} הטבות)`);
+    } else {
+      const e = await r.json();
+      showToast(e.error || 'שגיאה', true);
+    }
+  } catch {
+    showToast('בעיית חיבור', true);
+  }
 }
 
 async function grantBonusSpinsAll() {
