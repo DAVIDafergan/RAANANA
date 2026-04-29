@@ -227,7 +227,13 @@
     backdrop-filter: blur(10px);
   }
   .btn-ghost:hover { background: rgba(123,92,246,0.15); border-color: rgba(123,92,246,0.5); transform: translateY(-1px); }
+  .btn-success {
+    background: linear-gradient(135deg, #22C55E, #16A34A);
+    color: #fff; box-shadow: 0 4px 22px rgba(34,197,94,0.3); margin-top: 10px;
+  }
+  .btn-success:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 34px rgba(34,197,94,0.55); }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+  .contact-tip { display: none; font-size: 13px; color: var(--muted); text-align: center; margin: 8px 0 4px; }
 
   /* ── Contact step ── */
   .contact-step {
@@ -857,9 +863,11 @@
           <p>055-667-4329</p>
         </div>
       </div>
-      <a href="/raanana-wheel.vcf" download onclick="setTimeout(contactSaved, 500)">
+      <a id="vcf-link" href="/raanana-wheel.vcf" onclick="onVcfTap(event)">
         <button class="btn btn-gold">💾 שמור איש קשר לזכייה</button>
       </a>
+      <div id="contact-tip" class="contact-tip"></div>
+      <button id="confirm-saved-btn" class="btn btn-success" style="display:none;" onclick="contactSaved()">✅ שמרתי את המספר – קדימה!</button>
       <button id="already-saved-btn" class="btn btn-ghost" style="display:none;margin-top:8px;" onclick="contactSaved()">✅ שמרתי כבר – המשך לגלגל</button>
       <button class="btn btn-ghost" id="contact-back-btn" onclick="goTo('screen-otp', 1)">⟵ חזרה</button>
     </div>
@@ -1008,6 +1016,13 @@ function goTo(screenId, dot) {
     if (i < dot) d.classList.add('done');
     else if (i === dot) d.classList.add('active');
   });
+  // Reset contact-screen state so the confirm button is hidden on re-entry
+  if (screenId === 'screen-contact') {
+    const confirmBtn = document.getElementById('confirm-saved-btn');
+    const tip = document.getElementById('contact-tip');
+    if (confirmBtn) confirmBtn.style.display = 'none';
+    if (tip) tip.style.display = 'none';
+  }
   // Trigger entrance animations on newly visible elements
   requestAnimationFrame(() => triggerScreenAnimations(screenId));
 }
@@ -1174,6 +1189,42 @@ function contactSaved() {
   localStorage.setItem('whl_contact_saved', '1');
   goTo('screen-wheel', 3);
   loadWheelData();
+}
+
+function onVcfTap(e) {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const link = document.getElementById('vcf-link');
+  const tip = document.getElementById('contact-tip');
+  const confirmBtn = document.getElementById('confirm-saved-btn');
+
+  if (isIOS) {
+    // On iOS Safari, opening the VCF without the download attribute
+    // triggers the native "Add Contact" sheet.
+    e.preventDefault();
+    link.removeAttribute('download');
+    window.location.href = '/raanana-wheel.vcf';
+    if (tip) {
+      tip.textContent = '📲 iOS: לאחר הפתיחה בחר "הוסף איש קשר חדש" ואז "סיום"';
+      tip.style.display = 'block';
+    }
+  } else if (isAndroid) {
+    link.setAttribute('download', 'raanana-wheel.vcf');
+    if (tip) {
+      tip.textContent = '📲 אנדרואיד: לאחר ההורדה פתח את הקובץ ולחץ "הוסף לאנשי קשר"';
+      tip.style.display = 'block';
+    }
+  } else {
+    link.setAttribute('download', 'raanana-wheel.vcf');
+    if (tip) {
+      tip.textContent = '📲 לאחר ההורדה פתח את הקובץ ושמור את איש הקשר';
+      tip.style.display = 'block';
+    }
+  }
+
+  if (confirmBtn) {
+    confirmBtn.style.display = 'block';
+  }
 }
 
 async function loadWheelData() {
