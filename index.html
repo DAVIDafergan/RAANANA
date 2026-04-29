@@ -1198,7 +1198,7 @@ function renderBenefitsTicker() {
   track.innerHTML = items + items;
 
   // Adjust speed based on number of items (more items → longer track → same apparent speed)
-  const speed = Math.max(6, tickerBenefits.length * 1);
+  const speed = Math.max(3, tickerBenefits.length * 0.8);
   track.style.animationDuration = speed + 's';
 
   ticker.style.display = '';

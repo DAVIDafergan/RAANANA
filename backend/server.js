@@ -328,7 +328,7 @@ app.get('/api/benefits', auth, async (req, res) => {
   try {
     const benefits = await Benefit.find({ isActive: true, remainingStock: { $gt: 0 } })
       .select('businessName logoUrl prizeText color probability remainingStock');
-    const tickerBenefits = await Benefit.find({ isActive: true })
+    const tickerBenefits = await Benefit.find({ remainingStock: { $gt: 0 } })
       .select('businessName prizeText');
     const setting = await Settings.findOne({ key: 'globalLossProbability' });
     res.json({ benefits, tickerBenefits, lossProbability: setting?.value ?? 80 });
