@@ -436,6 +436,44 @@
     .ae-fade-up, .ae-fade-in, .ae-scale-in { opacity: 1; transform: none; transition: none; }
     .float-ambient { animation: none; }
   }
+  /* ── Contact reminder banner ── */
+  #contact-reminder {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(20,20,48,0.97), rgba(30,20,60,0.97));
+    border-top: 1.5px solid var(--accent2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    direction: rtl;
+    animation: slide-up-banner 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  #contact-reminder.visible { display: flex; }
+  @keyframes slide-up-banner {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  #contact-reminder .cr-text { flex: 1; min-width: 0; }
+  #contact-reminder .cr-title {
+    font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 14px; color: var(--gold);
+  }
+  #contact-reminder .cr-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  #contact-reminder .cr-save-btn {
+    font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 13px;
+    background: var(--gold); color: #000; border: none; border-radius: 50px;
+    padding: 9px 16px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    text-decoration: none; display: inline-block;
+  }
+  #contact-reminder .cr-dismiss-btn {
+    background: none; border: none; color: var(--muted); font-size: 22px;
+    cursor: pointer; padding: 2px 6px; line-height: 1; flex-shrink: 0;
+  }
 </style>
   <!-- Firebase SDK (compat – works with plain JS without bundler) -->
   <script src="/firebase-env.js"></script>
@@ -615,6 +653,16 @@
 
 <!-- Invisible reCAPTCHA anchor for Firebase Phone Auth -->
 <div id="recaptcha-container"></div>
+
+<!-- Contact save reminder (non-intrusive, shown to users who haven't saved the contact yet) -->
+<div id="contact-reminder" role="region" aria-label="תזכורת שמירת איש קשר">
+  <div class="cr-text">
+    <div class="cr-title">📱 עדיין לא שמרת את המספר שלנו?</div>
+    <div class="cr-sub">שמור כדי לקבל עדכונים ופרסים ישירות לטלפון</div>
+  </div>
+  <a href="/raanana-wheel.vcf" download class="cr-save-btn" onclick="contactSavedFromBanner()">💾 שמור</a>
+  <button class="cr-dismiss-btn" onclick="dismissContactReminder()" aria-label="סגור">×</button>
+</div>
 
 <script>
 // ─── Firebase config ──────────────────────────────────────────────────────────
@@ -832,6 +880,12 @@ function goTo(screenId, dot) {
   });
   // Trigger entrance animations on newly visible elements
   requestAnimationFrame(() => triggerScreenAnimations(screenId));
+  // Show contact-save reminder (with delay) when user reaches the wheel
+  if (screenId === 'screen-wheel') {
+    setTimeout(showContactReminder, 4000);
+  } else {
+    hideContactReminder();
+  }
 }
 
 // Reveal ae-* elements in the target screen with staggered delays
@@ -967,7 +1021,47 @@ async function verifyOTP() {
   btn.disabled = false; btn.textContent = 'אמת קוד ✓';
 }
 
-function contactSaved() { showWheelGreeting(userName, false); goTo('screen-wheel', 3); loadWheelData(); }
+function contactSaved() {
+  localStorage.setItem(CONTACT_SAVED_KEY, '1');
+  hideContactReminder();
+  showWheelGreeting(userName, false);
+  goTo('screen-wheel', 3);
+  loadWheelData();
+}
+
+// ── Contact reminder banner ────────────────────────────────────────────────────
+const CONTACT_SAVED_KEY = 'whl_contact_saved';
+const CONTACT_DISMISS_KEY = 'whl_contact_dismiss_ts';
+const CONTACT_REMIND_INTERVAL = 3 * 24 * 60 * 60 * 1000; // 3 days
+
+function shouldShowContactReminder() {
+  if (localStorage.getItem(CONTACT_SAVED_KEY)) return false;
+  const dismissed = parseInt(localStorage.getItem(CONTACT_DISMISS_KEY) || '0', 10);
+  return Date.now() - dismissed > CONTACT_REMIND_INTERVAL;
+}
+
+function showContactReminder() {
+  if (!shouldShowContactReminder()) return;
+  const el = document.getElementById('contact-reminder');
+  if (el) el.classList.add('visible');
+}
+
+function hideContactReminder() {
+  const el = document.getElementById('contact-reminder');
+  if (el) el.classList.remove('visible');
+}
+
+function dismissContactReminder() {
+  localStorage.setItem(CONTACT_DISMISS_KEY, String(Date.now()));
+  hideContactReminder();
+}
+
+function contactSavedFromBanner() {
+  localStorage.setItem(CONTACT_SAVED_KEY, '1');
+  // Short delay lets the browser begin the download before hiding the banner
+  setTimeout(hideContactReminder, 500);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function showBonusBanner(count) {
   const banner = document.getElementById('bonus-spin-banner');
