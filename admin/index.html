@@ -209,6 +209,9 @@
     <!-- USERS -->
     <div class="page" id="page-users">
       <div class="page-title">👥 משתמשים</div>
+      <div class="card" style="padding:14px 20px;margin-bottom:12px;">
+        <input type="text" id="users-search" placeholder="🔍 חיפוש לפי שם או טלפון..." style="margin:0;width:100%;max-width:360px;" oninput="filterUsers(this.value)">
+      </div>
       <div class="card">
         <table>
           <thead><tr><th>שם</th><th>טלפון</th><th>סיבובים</th><th>בונוס</th><th>סיבוב אחרון</th><th>הצטרף</th><th>פעולות</th></tr></thead>
@@ -775,9 +778,9 @@ async function loadWins() {
 }
 
 // ── USERS ──────────────────────────────────────────
-async function loadUsers() {
-  const r = await fetch(`${API}/admin/users`, { headers: { 'x-admin-key': adminKey } });
-  const data = r.ok ? await r.json() : [];
+let allUsers = [];
+
+function renderUsersTable(data) {
   const tbody = document.getElementById('users-tbody');
   if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">אין משתמשים</td></tr>'; return; }
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -794,6 +797,21 @@ async function loadUsers() {
         <button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="deleteUser('${esc(u._id)}','${esc(u.name)}')">🗑️</button>
       </td>
     </tr>`).join('');
+}
+
+function filterUsers(q) {
+  const term = q.trim().toLowerCase();
+  if (!term) { renderUsersTable(allUsers); return; }
+  renderUsersTable(allUsers.filter(u =>
+    u.name.toLowerCase().includes(term) || u.phone.includes(term)
+  ));
+}
+
+async function loadUsers() {
+  const r = await fetch(`${API}/admin/users`, { headers: { 'x-admin-key': adminKey } });
+  allUsers = r.ok ? await r.json() : [];
+  const searchVal = document.getElementById('users-search')?.value || '';
+  filterUsers(searchVal);
 }
 
 async function deleteUser(userId, userName) {
