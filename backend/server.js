@@ -42,7 +42,14 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 
-// Serve static files: frontend at /, admin at /admin, vcf at /raanana-wheel.vcf
+// Serve the vCard with explicit charset so Hebrew characters display correctly on all devices
+app.get('/raanana-wheel.vcf', userLimiter, (req, res) => {
+  res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="raanana-wheel.vcf"');
+  res.sendFile(path.join(__dirname, '../public/raanana-wheel.vcf'));
+});
+
+// Serve static files: frontend at /, admin at /admin
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 
