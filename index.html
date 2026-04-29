@@ -860,7 +860,8 @@
       <a href="/raanana-wheel.vcf" download onclick="setTimeout(contactSaved, 500)">
         <button class="btn btn-gold">💾 שמור איש קשר לזכייה</button>
       </a>
-      <button class="btn btn-ghost" onclick="goTo('screen-otp', 1)">⟵ חזרה</button>
+      <button id="already-saved-btn" class="btn btn-ghost" style="display:none;margin-top:8px;" onclick="contactSaved()">✅ שמרתי כבר – המשך לגלגל</button>
+      <button class="btn btn-ghost" id="contact-back-btn" onclick="goTo('screen-otp', 1)">⟵ חזרה</button>
     </div>
   </div>
 
@@ -986,7 +987,17 @@ let tickerBenefits = [];
 let timerInterval;
 
 window.addEventListener('DOMContentLoaded', () => {
-  if (token) { goTo('screen-wheel', 3); loadWheelData(); }
+  if (token) {
+    const contactSavedFlag = localStorage.getItem('whl_contact_saved');
+    if (!contactSavedFlag) {
+      // Returning user who hasn't saved the contact yet – show the reminder
+      document.getElementById('already-saved-btn').style.display = '';
+      document.getElementById('contact-back-btn').style.display = 'none';
+      goTo('screen-contact', 2);
+    } else {
+      goTo('screen-wheel', 3); loadWheelData();
+    }
+  }
 });
 
 function goTo(screenId, dot) {
@@ -1159,7 +1170,11 @@ async function verifyOTP() {
   btn.disabled = false; btn.textContent = 'אמת קוד ✓';
 }
 
-function contactSaved() { goTo('screen-wheel', 3); loadWheelData(); }
+function contactSaved() {
+  localStorage.setItem('whl_contact_saved', '1');
+  goTo('screen-wheel', 3);
+  loadWheelData();
+}
 
 async function loadWheelData() {
   const spinBtn = document.getElementById('spin-btn');
