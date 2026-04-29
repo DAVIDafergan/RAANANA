@@ -50,7 +50,7 @@ app.get('/firebase-env.js', (req, res) => {
 });
 
 // ─── FILE UPLOAD CONFIG (LOGO) ───────────────────────
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2 MB
 
 // Use memory storage so uploaded logos are stored as base64 data URIs in MongoDB
@@ -185,7 +185,8 @@ app.post('/api/auth/quick-login', userLimiter, async (req, res) => {
       }
     }
 
-    const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
+    if (!process.env.SECRET) return res.status(500).json({ error: 'שגיאת תצורת שרת' });
+    const token = Buffer.from(`${user._id}:${process.env.SECRET}`).toString('base64');
     return res.json({ success: true, token, userId: user._id, name: user.name, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
   } catch (err) {
     console.error(err);
@@ -251,7 +252,8 @@ app.post('/api/auth/firebase-verify', otpLimiter, async (req, res) => {
       }
     }
 
-    const token = Buffer.from(`${user._id}:${process.env.SECRET || 'dev'}`).toString('base64');
+    if (!process.env.SECRET) return res.status(500).json({ error: 'שגיאת תצורת שרת' });
+    const token = Buffer.from(`${user._id}:${process.env.SECRET}`).toString('base64');
     return res.json({ success: true, token, userId: user._id, name: user.name, isNewUser, canSpin, nextSpinAt, bonusSpins: user.bonusSpins });
   } catch (err) {
     console.error(err);
@@ -266,7 +268,12 @@ async function auth(req, res, next) {
   if (!token) return res.status(401).json({ error: 'לא מחובר' });
   try {
     const decoded = Buffer.from(token, 'base64').toString();
-    const [userId] = decoded.split(':');
+    const colonIdx = decoded.indexOf(':');
+    if (colonIdx <= 0) return res.status(401).json({ error: 'טוקן לא תקין' });
+    const userId = decoded.slice(0, colonIdx);
+    const secret = decoded.slice(colonIdx + 1);
+    const expectedSecret = process.env.SECRET;
+    if (!expectedSecret || secret !== expectedSecret) return res.status(401).json({ error: 'טוקן לא תקין' });
     const user = await User.findById(userId);
     if (!user) return res.status(401).json({ error: 'משתמש לא נמצא' });
     req.user = user;
@@ -277,7 +284,8 @@ async function auth(req, res, next) {
 }
 
 function adminAuth(req, res, next) {
-  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) {
+  const adminKey = process.env.ADMIN_KEY;
+  if (!adminKey || req.headers['x-admin-key'] !== adminKey) {
     return res.status(401).json({ error: 'לא מורשה' });
   }
   next();
