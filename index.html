@@ -399,6 +399,70 @@
   }
   .warning-banner .warning-sub { font-size: 13px; color: var(--text); }
 
+  /* ── Benefits ticker banner ── */
+  .benefits-ticker {
+    width: 100%;
+    overflow: hidden;
+    background: linear-gradient(90deg, rgba(245,200,66,0.08), rgba(123,92,246,0.12), rgba(245,200,66,0.08));
+    border-top: 1px solid rgba(245,200,66,0.25);
+    border-bottom: 1px solid rgba(245,200,66,0.25);
+    padding: 8px 0;
+    margin: 10px 0 6px;
+    position: relative;
+    z-index: 1;
+  }
+  .benefits-ticker::before,
+  .benefits-ticker::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 40px;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .benefits-ticker::before {
+    right: 0;
+    background: linear-gradient(to left, var(--bg), transparent);
+  }
+  .benefits-ticker::after {
+    left: 0;
+    background: linear-gradient(to right, var(--bg), transparent);
+  }
+  .benefits-ticker-track {
+    display: flex;
+    gap: 0;
+    white-space: nowrap;
+    animation: ticker-scroll 18s linear infinite;
+    will-change: transform;
+  }
+  @keyframes ticker-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .benefits-ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+    font-family: 'Rubik', sans-serif;
+    flex-shrink: 0;
+  }
+  .benefits-ticker-item .ticker-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .benefits-ticker-item .ticker-biz {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 400;
+  }
+
   /* ── Misc ── */
   .error-msg { color: var(--danger); font-size: 13px; text-align: center; margin-top: -8px; margin-bottom: 10px; }
   .win-logo {
@@ -677,6 +741,7 @@
     .wheel-pointer       { animation: none; }
     #spin-btn            { animation: none; }
     .warning-banner      { animation: none; }
+    .benefits-ticker-track { animation: none; }
     .step-dot.active     { box-shadow: 0 0 6px rgba(245,200,66,0.4); }
     .win-icon,
     .loss-emoji          { animation: none; }
@@ -793,6 +858,9 @@
 
   <!-- SCREEN 4: Wheel -->
   <div class="screen" id="screen-wheel">
+    <div class="benefits-ticker" id="benefits-ticker" style="display:none;">
+      <div class="benefits-ticker-track" id="benefits-ticker-track"></div>
+    </div>
     <div class="card" style="padding:16px;">
       <div class="wheel-wrap">
         <div class="wheel-pointer"></div>
@@ -1099,6 +1167,39 @@ async function loadWheelData() {
     drawWheel();
     if (spinBtn) { spinBtn.disabled = false; spinBtn.textContent = '🎡 סובב!'; }
   }
+  renderBenefitsTicker();
+}
+
+function renderBenefitsTicker() {
+  const ticker = document.getElementById('benefits-ticker');
+  const track = document.getElementById('benefits-ticker-track');
+  if (!ticker || !track) return;
+  if (!wheelBenefits.length) { ticker.style.display = 'none'; return; }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  const items = wheelBenefits.map(b =>
+    `<span class="benefits-ticker-item">` +
+    `<span class="ticker-dot"></span>` +
+    `<span>${escHtml(b.prizeText)}</span>` +
+    `<span class="ticker-biz">${escHtml(b.businessName)}</span>` +
+    `</span>`
+  ).join('');
+  // Duplicate for seamless looping
+  track.innerHTML = items + items;
+
+  // Adjust speed based on number of items (more items → longer track → same apparent speed)
+  const speed = Math.max(10, wheelBenefits.length * 3);
+  track.style.animationDuration = speed + 's';
+
+  ticker.style.display = '';
 }
 
 const COLORS = ['#7B5CF6','#E85D04','#00BBF9','#F15BB5','#22C55E','#F59E0B','#EF4444','#06B6D4'];
