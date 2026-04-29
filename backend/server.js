@@ -328,7 +328,7 @@ app.get('/api/benefits', auth, async (req, res) => {
   try {
     const benefits = await Benefit.find({ isActive: true, remainingStock: { $gt: 0 } })
       .select('businessName logoUrl prizeText color probability remainingStock');
-    const tickerBenefits = await Benefit.find({ remainingStock: { $gt: 0 } })
+    const tickerBenefits = await Benefit.find({ isActive: true })
       .select('businessName prizeText');
     const setting = await Settings.findOne({ key: 'globalLossProbability' });
     res.json({ benefits, tickerBenefits, lossProbability: setting?.value ?? 80 });
@@ -362,7 +362,8 @@ app.post('/api/spin', auth, spinLimiter, async (req, res) => {
       }
     }
 
-    const benefits = await Benefit.find({ isActive: true, remainingStock: { $gt: 0 } });
+    const benefits = await Benefit.find({ isActive: true, remainingStock: { $gt: 0 } })
+      .populate('businessId', 'logoUrl');
     const lossSetting = await Settings.findOne({ key: 'globalLossProbability' });
     let lossProb = lossSetting?.value ?? 80;
 
@@ -397,7 +398,7 @@ app.post('/api/spin', auth, spinLimiter, async (req, res) => {
       });
       return res.json({
         isWin: true,
-        prize: { businessName: winner.businessName, logoUrl: winner.logoUrl, prizeText: winner.prizeText },
+        prize: { businessName: winner.businessName, logoUrl: winner.logoUrl || winner.businessId?.logoUrl || '', prizeText: winner.prizeText },
         expiresAt, verificationCode, spinId: spin._id,
       });
     } else {
