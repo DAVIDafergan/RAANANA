@@ -971,6 +971,7 @@ let regPhone = '', regName = '';
 let isSpinning = false;
 let currentAngle = 0;
 let wheelBenefits = [];
+let tickerBenefits = [];
 let timerInterval;
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -1156,6 +1157,7 @@ async function loadWheelData() {
     const r = await fetch(`${API}/api/benefits`, { headers: { Authorization: `Bearer ${token}` } });
     const d = await r.json();
     wheelBenefits = d.benefits || [];
+    tickerBenefits = d.tickerBenefits || d.benefits || [];
     lossProbability = d.lossProbability ?? 80;
   } catch {
     wheelBenefits = [
@@ -1174,7 +1176,7 @@ function renderBenefitsTicker() {
   const ticker = document.getElementById('benefits-ticker');
   const track = document.getElementById('benefits-ticker-track');
   if (!ticker || !track) return;
-  if (!wheelBenefits.length) { ticker.style.display = 'none'; return; }
+  if (!tickerBenefits.length) { ticker.style.display = 'none'; return; }
 
   function escHtml(str) {
     return String(str)
@@ -1185,7 +1187,7 @@ function renderBenefitsTicker() {
       .replace(/'/g, '&#39;');
   }
 
-  const items = wheelBenefits.map(b =>
+  const items = tickerBenefits.map(b =>
     `<span class="benefits-ticker-item">` +
     `<span class="ticker-dot"></span>` +
     `<span>${escHtml(b.prizeText)}</span>` +
@@ -1196,7 +1198,7 @@ function renderBenefitsTicker() {
   track.innerHTML = items + items;
 
   // Adjust speed based on number of items (more items → longer track → same apparent speed)
-  const speed = Math.max(10, wheelBenefits.length * 3);
+  const speed = Math.max(6, tickerBenefits.length * 1);
   track.style.animationDuration = speed + 's';
 
   ticker.style.display = '';
