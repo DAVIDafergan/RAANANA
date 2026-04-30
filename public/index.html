@@ -558,9 +558,9 @@
         </div>
       </div>
       <a href="/raanana-wheel.vcf" download onclick="setTimeout(contactSaved, 500)">
-        <button class="btn btn-gold">💾 שמור איש קשר לזכייה</button>
+        <button class="btn btn-gold">לחץ כאן ואז על 'צור איש קשר חדש'</button>
       </a>
-      <button class="btn btn-ghost" style="margin-top:10px;" onclick="goTo('screen-otp', 1)">⟵ חזרה</button>
+      <button class="btn btn-ghost" id="contact-back-btn" style="margin-top:10px;" onclick="goTo('screen-otp', 1)">⟵ חזרה</button>
     </div>
   </div>
 
@@ -686,6 +686,7 @@ let currentAngle = 0;
 let wheelBenefits = [];
 let lossProbability = 80;
 let timerInterval;
+let pendingUserStatus = null;
 
 // Redraw the wheel when the window is resized so it stays crisp
 window.addEventListener('resize', () => { drawWheel(); });
@@ -831,7 +832,21 @@ window.addEventListener('DOMContentLoaded', async () => {
         const d = await r.json();
         userName = d.name;
         localStorage.setItem('whl_name', userName);
-        if (!d.canSpin) {
+        if (!localStorage.getItem('whl_contact_saved')) {
+          // Returning user who hasn't saved the contact yet – show save screen first
+          pendingUserStatus = d;
+          const backBtn = document.getElementById('contact-back-btn');
+          if (backBtn) {
+            backBtn.textContent = 'דלג לגלגל ←';
+            backBtn.onclick = () => {
+              pendingUserStatus = null;
+              showWheelGreeting(userName, true);
+              goTo('screen-wheel', 3);
+              loadWheelData();
+            };
+          }
+          goTo('screen-contact', 2);
+        } else if (!d.canSpin) {
           loadWheelData();
           showWheelGreeting(userName, true);
           showLoss(d.nextSpinAt);
@@ -1024,9 +1039,18 @@ async function verifyOTP() {
 function contactSaved() {
   localStorage.setItem(CONTACT_SAVED_KEY, '1');
   hideContactReminder();
-  showWheelGreeting(userName, false);
-  goTo('screen-wheel', 3);
-  loadWheelData();
+  const status = pendingUserStatus;
+  pendingUserStatus = null;
+  if (status && !status.canSpin) {
+    loadWheelData();
+    showWheelGreeting(userName, true);
+    showLoss(status.nextSpinAt);
+  } else {
+    showWheelGreeting(userName, status ? true : false);
+    goTo('screen-wheel', 3);
+    loadWheelData();
+    if (status && status.bonusSpins > 0) showBonusBanner(status.bonusSpins);
+  }
 }
 
 // ── Contact reminder banner ────────────────────────────────────────────────────
