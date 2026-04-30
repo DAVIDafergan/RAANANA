@@ -42,6 +42,12 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 
+// Rate limiters
+const spinLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+const otpLimiter = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false });
+const adminLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+const userLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
+
 // Serve the vCard with explicit charset so Hebrew characters display correctly on all devices
 app.get('/raanana-wheel.vcf', userLimiter, (req, res) => {
   res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
@@ -84,12 +90,6 @@ const logoUpload = multer({
     }
   },
 });
-
-// Rate limiters
-const spinLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
-const otpLimiter = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false });
-const adminLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
-const userLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
 
 // DB connect
 mongoose.connect(process.env.MONGO_URI)
